@@ -3,12 +3,13 @@ let csrfToken = "";
 
 async function request(path, options = {}) {
   const { headers: optionHeaders = {}, ...requestOptions } = options;
+  const isFormData = typeof FormData !== "undefined" && requestOptions.body instanceof FormData;
   let response;
   try {
     response = await fetch(`${API_URL}${path}`, {
       credentials: "include",
       ...requestOptions,
-      headers: { "content-type": "application/json", ...(csrfToken && { "x-csrf-token": csrfToken }), ...optionHeaders }
+      headers: { ...(!isFormData && { "content-type": "application/json" }), ...(csrfToken && { "x-csrf-token": csrfToken }), ...optionHeaders }
     });
   } catch {
     throw new Error("Няма връзка със сървъра. Провери дали backend-ът работи и опитай отново.");
@@ -25,11 +26,11 @@ export async function getSession() {
 }
 export const register = (values) => request("/auth/register", { method: "POST", body: JSON.stringify(values) });
 export const logout = () => request("/auth/logout", { method: "POST" });
-export const recognizeIngredients = (file) => request("/recognitions", {
-  method: "POST",
-  headers: { "content-type": file.type },
-  body: file
-});
+export const recognizeIngredients = (files) => {
+  const form = new FormData();
+  files.forEach((file) => form.append("images", file));
+  return request("/recognitions", { method: "POST", body: form });
+};
 export const generateRecipes = (ingredients) => request("/recipes/generate", {
   method: "POST",
   body: JSON.stringify({ ingredients: ingredients.map((ingredient) => ingredient.name) })

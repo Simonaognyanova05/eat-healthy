@@ -1,6 +1,6 @@
 import { recognitionJsonSchema, recognitionResultSchema } from "../validation/recognitionSchemas.js";
 
-export async function recognizeImage({ image, mime, env, fetchImpl = fetch }) {
+export async function recognizeImages({ images, env, fetchImpl = fetch }) {
   const response = await fetchImpl("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: { authorization: `Bearer ${env.OPENAI_API_KEY}`, "content-type": "application/json" },
@@ -9,8 +9,8 @@ export async function recognizeImage({ image, mime, env, fetchImpl = fetch }) {
       store: false,
       max_output_tokens: 1400,
       input: [{ role: "user", content: [
-        { type: "input_text", text: "Разпознай само видимите хранителни продукти. Върни кратки нормализирани имена на български, без марки, съдове и кухненски предмети. Не отгатвай скрити продукти. При несигурност намали confidence и добави предупреждение." },
-        { type: "input_image", image_url: `data:${mime};base64,${image.toString("base64")}`, detail: "high" }
+        { type: "input_text", text: `Анализирай всичките ${images.length} изображения като една обща кухня. Разпознай само видимите хранителни продукти и върни един обединен списък без повторения. Използвай кратки нормализирани имена на български, без марки, съдове и кухненски предмети. Не отгатвай скрити продукти. При несигурност намали confidence и добави предупреждение.` },
+        ...images.map(({ buffer, mime }) => ({ type: "input_image", image_url: `data:${mime};base64,${buffer.toString("base64")}`, detail: "high" }))
       ] }],
       text: { format: { type: "json_schema", name: "ingredient_recognition", strict: true, schema: recognitionJsonSchema } }
     }),
@@ -24,3 +24,5 @@ export async function recognizeImage({ image, mime, env, fetchImpl = fetch }) {
   if (!parsed.success) throw new Error("AI_INVALID_OUTPUT");
   return { ...parsed.data, model: env.OPENAI_MODEL };
 }
+
+export const recognizeImage = ({ image, mime, ...options }) => recognizeImages({ images: [{ buffer: image, mime }], ...options });

@@ -24,6 +24,8 @@ export function createApp(env) {
   app.get("/api/v1/health", (_req, res) => res.json({ data: { status: "ok" } }));
   app.use((_req, res) => res.status(404).json({ error: { code: "NOT_FOUND", message: "Ресурсът не е намерен." } }));
   app.use((error, _req, res, _next) => {
+    if (error?.code === "INVALID_FILE_TYPE") return res.status(415).json({ error: { code: "INVALID_IMAGE", message: "Избери само JPG, PNG или WebP снимки." } });
+    if (error?.name === "MulterError") return res.status(413).json({ error: { code: "UPLOAD_LIMIT", message: "Качи до 5 снимки, всяка до 10 MB." } });
     if (env.NODE_ENV !== "test") console.error("request_failed", { name: error?.name });
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Нещо се обърка. Опитай отново." } });
   });

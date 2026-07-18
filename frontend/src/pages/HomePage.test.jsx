@@ -14,21 +14,21 @@ beforeEach(() => jest.clearAllMocks());
 
 it("opens the camera flow", async () => {
   render(<HomePage user={{ displayName: "Ива" }} onLoggedOut={jest.fn()} />);
-  fireEvent.click(screen.getByRole("button", { name: /Снимай хладилника/ }));
+  fireEvent.click(screen.getByRole("button", { name: /Снимай продуктите/ }));
   expect(await screen.findByRole("dialog")).toBeInTheDocument();
 });
 
 it("rejects unsupported image formats before upload", () => {
   render(<HomePage user={{ displayName: "Ива" }} onLoggedOut={jest.fn()} />);
-  fireEvent.change(screen.getByLabelText("Качи снимка от устройството"), { target: { files: [new File(["x"], "fridge.gif", { type: "image/gif" })] } });
+  fireEvent.change(screen.getByLabelText("Качи снимки от устройството"), { target: { files: [new File(["x"], "fridge.gif", { type: "image/gif" })] } });
   expect(screen.getByRole("alert")).toHaveTextContent("JPG, PNG или WebP");
 });
 
 it("lets the user remove detected and add missing ingredients", async () => {
   recognizeIngredients.mockResolvedValue({ context: "fridge", warnings: [], ingredients: [{ name: "яйца", confidence: 0.95 }, { name: "домати", confidence: 0.8 }] });
   render(<HomePage user={{ displayName: "Ива" }} onLoggedOut={jest.fn()} />);
-  fireEvent.change(screen.getByLabelText("Качи снимка от устройството"), { target: { files: [new File(["image"], "fridge.jpg", { type: "image/jpeg" })] } });
-  fireEvent.click(screen.getByRole("button", { name: "Разпознай продуктите" }));
+  fireEvent.change(screen.getByLabelText("Качи снимки от устройството"), { target: { files: [new File(["image"], "fridge.jpg", { type: "image/jpeg" })] } });
+  fireEvent.click(screen.getByRole("button", { name: "Разпознай от снимката" }));
   await screen.findByRole("heading", { name: "Какво открихме" });
   fireEvent.click(screen.getByRole("button", { name: "Премахни яйца" }));
   fireEvent.change(screen.getByLabelText("Липсващ продукт"), { target: { value: "краставици" } });
@@ -40,8 +40,8 @@ it("lets the user remove detected and add missing ingredients", async () => {
 it("shows a completed state after confirming the corrected ingredients", async () => {
   recognizeIngredients.mockResolvedValue({ context: "fridge", warnings: [], ingredients: [{ name: "яйца", confidence: 0.95 }] });
   render(<HomePage user={{ displayName: "Ива" }} onLoggedOut={jest.fn()} />);
-  fireEvent.change(screen.getByLabelText("Качи снимка от устройството"), { target: { files: [new File(["image"], "fridge.jpg", { type: "image/jpeg" })] } });
-  fireEvent.click(screen.getByRole("button", { name: "Разпознай продуктите" }));
+  fireEvent.change(screen.getByLabelText("Качи снимки от устройството"), { target: { files: [new File(["image"], "fridge.jpg", { type: "image/jpeg" })] } });
+  fireEvent.click(screen.getByRole("button", { name: "Разпознай от снимката" }));
   await screen.findByRole("button", { name: "Потвърди продуктите" });
   fireEvent.click(screen.getByRole("button", { name: "Потвърди продуктите" }));
   expect(screen.getByRole("heading", { name: /Продуктите са потвърдени/ })).toBeInTheDocument();
@@ -53,8 +53,8 @@ it("generates recipe cards and opens a recipe detail", async () => {
   recognizeIngredients.mockResolvedValue({ context: "fridge", warnings: [], ingredients: [{ name: "яйца", confidence: 0.95 }] });
   generateRecipes.mockResolvedValue({ recipes: [recipe, { ...recipe, id: "recipe-2", title: "Яйца на фурна" }, { ...recipe, id: "recipe-3", title: "Салата със сирене" }] });
   render(<HomePage user={{ displayName: "Ива" }} onLoggedOut={jest.fn()} />);
-  fireEvent.change(screen.getByLabelText("Качи снимка от устройството"), { target: { files: [new File(["image"], "fridge.jpg", { type: "image/jpeg" })] } });
-  fireEvent.click(screen.getByRole("button", { name: "Разпознай продуктите" }));
+  fireEvent.change(screen.getByLabelText("Качи снимки от устройството"), { target: { files: [new File(["image"], "fridge.jpg", { type: "image/jpeg" })] } });
+  fireEvent.click(screen.getByRole("button", { name: "Разпознай от снимката" }));
   await screen.findByRole("button", { name: "Потвърди продуктите" });
   fireEvent.click(screen.getByRole("button", { name: "Потвърди продуктите" }));
   fireEvent.click(screen.getByRole("button", { name: "Генерирай" }));
@@ -63,4 +63,16 @@ it("generates recipe cards and opens a recipe detail", async () => {
   fireEvent.click(screen.getAllByRole("button", { name: "Виж рецептата" })[0]);
   expect(screen.getByRole("heading", { name: "Омлет със сирене" })).toBeInTheDocument();
   expect(screen.getByText(/ориентировъчна AI оценка/i)).toBeInTheDocument();
+});
+
+it("uploads multiple images together and can remove one before recognition", async () => {
+  recognizeIngredients.mockResolvedValue({ context: "mixed", warnings: [], ingredients: [] });
+  render(<HomePage user={{ displayName: "Ива" }} onLoggedOut={jest.fn()} />);
+  const files = [new File(["one"], "fridge.jpg", { type: "image/jpeg" }), new File(["two"], "cupboard.png", { type: "image/png" })];
+  fireEvent.change(screen.getByLabelText("Качи снимки от устройството"), { target: { files } });
+  expect(screen.getByText("2 от 5 снимки")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Премахни снимка 2" }));
+  expect(screen.getByText("1 от 5 снимки")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Разпознай от снимката" }));
+  await waitFor(() => expect(recognizeIngredients).toHaveBeenCalledWith([files[0]]));
 });

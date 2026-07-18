@@ -4,21 +4,24 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
-it("preserves the CSRF token when an image content type is supplied", async () => {
+it("preserves the CSRF token for a multi-image multipart upload", async () => {
   const fetchMock = jest.spyOn(global, "fetch")
     .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ data: { user: { id: "user-1" }, csrfToken: "csrf-token" } }) })
     .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ data: { ingredients: [] } }) });
 
   await getSession();
   const file = new File(["image"], "fridge.jpg", { type: "image/jpeg" });
-  await recognizeIngredients(file);
+  await recognizeIngredients([file]);
 
-  expect(fetchMock.mock.calls[1][1]).toEqual(expect.objectContaining({
+  const options = fetchMock.mock.calls[1][1];
+  expect(options).toEqual(expect.objectContaining({
     method: "POST",
     credentials: "include",
-    body: file,
-    headers: expect.objectContaining({ "content-type": "image/jpeg", "x-csrf-token": "csrf-token" })
+    body: expect.any(FormData),
+    headers: expect.objectContaining({ "x-csrf-token": "csrf-token" })
   }));
+  expect(options.headers["content-type"]).toBeUndefined();
+  expect(options.body.getAll("images")).toHaveLength(1);
 });
 
 it("returns a clear Bulgarian message when the API is unreachable", async () => {
