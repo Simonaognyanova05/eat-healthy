@@ -30,4 +30,8 @@ export const recognizeIngredients = (file) => request("/recognitions", {
   headers: { "content-type": file.type },
   body: file
 });
+export const generateRecipes = (ingredients) => request("/recipes/generate", {
+  method: "POST",
+  body: JSON.stringify({ ingredients: ingredients.map((ingredient) => ingredient.name) })
+});
 export const oauthUrl = (provider) => `${API_URL}/auth/oauth/${provider}/start`;

@@ -4,9 +4,11 @@ import { BrandMark } from "../components/BrandMark";
 import { CameraDialog } from "../components/CameraDialog";
 import { IngredientReview } from "../components/IngredientReview";
 import { ConfirmedIngredients } from "../components/ConfirmedIngredients";
-import { logout, recognizeIngredients } from "../services/authApi";
+import { RecipeResults } from "../components/RecipeResults";
+import { generateRecipes, logout, recognizeIngredients } from "../services/authApi";
 import "../styles/home.css";
 import "../styles/recognition.css";
+import "../styles/recipes.css";
 
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -20,6 +22,9 @@ export function HomePage({ user, onLoggedOut }) {
   const [ingredients, setIngredients] = useState([]);
   const [error, setError] = useState("");
   const [loggingOut, setLoggingOut] = useState(false);
+  const [recipes, setRecipes] = useState([]);
+  const [recipeStatus, setRecipeStatus] = useState("idle");
+  const [recipeError, setRecipeError] = useState("");
 
   useEffect(() => () => { if (selection?.previewUrl) URL.revokeObjectURL(selection.previewUrl); }, [selection]);
 
@@ -39,7 +44,12 @@ export function HomePage({ user, onLoggedOut }) {
       setResult(data); setIngredients(data.ingredients || []); setStatus("review");
     } catch (requestError) { setError(requestError.message); setStatus("error"); }
   }
-  function restart() { setSelection(null); setResult(null); setIngredients([]); setError(""); setStatus("capture"); }
+  function restart() { setSelection(null); setResult(null); setIngredients([]); setRecipes([]); setRecipeStatus("idle"); setRecipeError(""); setError(""); setStatus("capture"); }
+  async function createRecipes() {
+    setRecipeStatus("loading"); setRecipeError("");
+    try { const data = await generateRecipes(ingredients); setRecipes(data.recipes || []); setRecipeStatus("success"); setStatus("recipes"); }
+    catch (requestError) { setRecipeStatus("error"); setRecipeError(requestError.message); }
+  }
   async function handleLogout() {
     setLoggingOut(true);
     try { await logout(); onLoggedOut(); }
@@ -48,7 +58,7 @@ export function HomePage({ user, onLoggedOut }) {
 
   return <main className="home-page">
     <header className="home-header"><BrandMark /><div className="home-account"><span>{user?.displayName || "Твоята кухня"}</span><button className="logout-button" onClick={handleLogout} disabled={loggingOut}><LogOut size={16} /> {loggingOut ? "Излизане…" : "Изход"}</button></div></header>
-    {status === "review" ? <IngredientReview result={result} ingredients={ingredients} onChange={setIngredients} onRestart={restart} onConfirm={() => setStatus("confirmed")} /> : status === "confirmed" ? <ConfirmedIngredients ingredients={ingredients} onEdit={() => setStatus("review")} onRestart={restart} /> : <section className="capture-hero">
+    {status === "review" ? <IngredientReview result={result} ingredients={ingredients} onChange={setIngredients} onRestart={restart} onConfirm={() => setStatus("confirmed")} /> : status === "confirmed" ? <ConfirmedIngredients ingredients={ingredients} onEdit={() => setStatus("review")} onGenerate={createRecipes} generating={recipeStatus === "loading"} error={recipeError} /> : status === "recipes" ? <RecipeResults recipes={recipes} onBack={() => setStatus("confirmed")} onRestart={restart} /> : <section className="capture-hero">
       <p className="home-eyebrow"><Leaf size={14} /> Започни с това, което имаш</p><h1>Какво има<br />в твоята кухня?</h1>
       <p className="home-intro">Покажи ни хладилника, шкафа или продуктите на масата. Ясната снимка помага да открием повече съставки.</p>
       <div className="capture-actions"><button className="capture-card capture-primary" onClick={() => setCameraOpen(true)} disabled={status === "processing"}><span className="capture-icon"><Camera size={30} /></span><span><strong>Снимай хладилника</strong><small>Отвори камерата</small></span><span className="action-arrow">→</span></button><button className="capture-card" onClick={() => uploadInput.current?.click()} disabled={status === "processing"}><span className="capture-icon"><Upload size={28} /></span><span><strong>Качи снимка</strong><small>Избери от устройството</small></span><span className="action-arrow">→</span></button></div>

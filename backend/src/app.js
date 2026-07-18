@@ -4,6 +4,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import authRoutes from "./routes/authRoutes.js";
 import recognitionRoutes from "./routes/recognitionRoutes.js";
+import recipeRoutes from "./routes/recipeRoutes.js";
 import { csrfCookie, requireCsrf } from "./middleware/security.js";
 
 export function createApp(env) {
@@ -19,6 +20,7 @@ export function createApp(env) {
   app.use(csrfCookie);
   app.use("/api/v1/auth", requireCsrf, authRoutes);
   app.use("/api/v1/recognitions", requireCsrf, recognitionRoutes);
+  app.use("/api/v1/recipes", requireCsrf, recipeRoutes);
   app.get("/api/v1/health", (_req, res) => res.json({ data: { status: "ok" } }));
   app.use((_req, res) => res.status(404).json({ error: { code: "NOT_FOUND", message: "Ресурсът не е намерен." } }));
   app.use((error, _req, res, _next) => {
