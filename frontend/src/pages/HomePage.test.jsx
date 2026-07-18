@@ -62,6 +62,9 @@ it("generates recipe cards and opens a recipe detail", async () => {
   expect(generateRecipes).toHaveBeenCalledWith(expect.arrayContaining([expect.objectContaining({ name: "яйца" })]));
   fireEvent.click(screen.getAllByRole("button", { name: "Виж рецептата" })[0]);
   expect(screen.getByRole("heading", { name: "Омлет със сирене" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Необходими продукти" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Начин" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Хранителни стойности" })).toBeInTheDocument();
   expect(screen.getByText(/ориентировъчна AI оценка/i)).toBeInTheDocument();
 });
 

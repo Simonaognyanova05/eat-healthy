@@ -2,3 +2,4 @@
 @media(max-width:900px){.recipe-grid{grid-template-columns:1fr}.recipe-card>p{min-height:0}.detail-columns{grid-template-columns:1fr}.recipe-card dl{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:620px){.recipe-results>header{display:block}.recipe-results>header .secondary-action{margin-top:22px}.recipe-card{padding:21px}.detail-columns{padding:22px;gap:34px}.nutrition-panel{grid-template-columns:1fr 1fr}.detail-meta{gap:11px}}
 .recipe-card .nutrition-note{margin-bottom:20px}.recipe-card .recipe-open{margin-top:auto}
+.detail-ingredient-name{display:flex;align-items:center;gap:7px}.detail-ingredient-name svg{flex:0 0 auto;color:var(--moss)}.detail-steps li div>strong{display:block;color:var(--moss);font-size:10px;text-transform:uppercase;letter-spacing:.07em}.nutrition-section{margin-top:30px}.nutrition-section>h3{font:600 27px/1.1 "Playfair Display",Georgia,serif;margin:0 0 14px}.nutrition-section .nutrition-panel{margin-top:0}
