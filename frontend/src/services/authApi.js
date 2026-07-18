@@ -25,6 +25,7 @@ export async function getSession() {
   return data;
 }
 export const register = (values) => request("/auth/register", { method: "POST", body: JSON.stringify(values) });
+export const login = (values) => request("/auth/login", { method: "POST", body: JSON.stringify(values) });
 export const logout = () => request("/auth/logout", { method: "POST" });
 export const recognizeIngredients = (files) => {
   const form = new FormData();

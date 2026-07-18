@@ -16,7 +16,7 @@ const queryMessage = () => {
   return "";
 };
 
-export function RegisterPage({ onAuthenticated = ignoreAuthentication }) {
+export function RegisterPage({ onAuthenticated = ignoreAuthentication, onGoToLogin = ignoreAuthentication }) {
   const [values, setValues] = useState(initial);
   const [ready, setReady] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -58,7 +58,7 @@ export function RegisterPage({ onAuthenticated = ignoreAuthentication }) {
       <p className="eyebrow">Всичко е готово</p>
       <h1>Твоята кухня,<br />с ново вдъхновение.</h1>
       <p>{status.message}</p>
-      <button className="primary-button" onClick={() => status.user && onAuthenticated(status.user)}>Продължи към началото <ArrowRight size={18} /></button>
+      <button className="primary-button" onClick={onGoToLogin}>Влез в профила си <ArrowRight size={18} /></button>
     </section>
   </main>;
 
@@ -94,7 +94,7 @@ export function RegisterPage({ onAuthenticated = ignoreAuthentication }) {
           <button className="primary-button" disabled={status.type === "loading"}>{status.type === "loading" ? "Създаваме профила…" : <>Създай профил <ArrowRight size={18} /></>}</button>
         </form>
         <p className="terms">Продължавайки, приемаш <a href="/terms">условията</a> и <a href="/privacy">политиката за поверителност</a>.</p>
-        <p className="signin">Вече имаш профил? <a href="/login">Влез</a></p>
+        <p className="signin">Вече имаш профил? <button className="text-link-button" onClick={onGoToLogin}>Влез</button></p>
       </div>
     </section>
   </main>;

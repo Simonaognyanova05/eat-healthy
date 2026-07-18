@@ -2,8 +2,8 @@ import { Router } from "express";
 import rateLimit from "express-rate-limit";
 import * as arctic from "arctic";
 import { OAuthFlow } from "../models/OAuthFlow.js";
-import { registerSchema } from "../validation/authSchemas.js";
-import { registerWithEmail, findOrCreateOAuthUser } from "../services/authService.js";
+import { loginSchema, registerSchema } from "../validation/authSchemas.js";
+import { authenticateWithEmail, registerWithEmail, findOrCreateOAuthUser } from "../services/authService.js";
 import { createSession, deleteSession, getSession } from "../services/sessionService.js";
 import { providerClient, verifiedClaims } from "../integrations/oauthProviders.js";
 import { randomToken, tokenHash } from "../utils/crypto.js";
@@ -30,6 +30,18 @@ router.post("/register", authLimit, async (req, res, next) => {
       res.cookie("eh_session", token, cookieOptions(req.app.locals.env));
     }
     res.status(201).json({ data: { accepted: true, user: user ? publicUser(user) : null } });
+  } catch (error) { next(error); }
+});
+
+router.post("/login", authLimit, async (req, res, next) => {
+  try {
+    const parsed = loginSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: { code: "INVALID_LOGIN", message: "Невалиден имейл или парола." } });
+    const user = await authenticateWithEmail(parsed.data);
+    if (!user) return res.status(401).json({ error: { code: "INVALID_LOGIN", message: "Невалиден имейл или парола." } });
+    const token = await createSession(user.id, req.app.locals.env.SESSION_SECRET);
+    res.cookie("eh_session", token, cookieOptions(req.app.locals.env));
+    return res.json({ data: { user: publicUser(user) } });
   } catch (error) { next(error); }
 });
 

@@ -20,6 +20,15 @@ export async function registerWithEmail({ email, password, displayName }) {
   }
 }
 
+export async function authenticateWithEmail({ email, password }) {
+  const user = await User.findOne({ email, status: "active" }).select("+passwordHash");
+  if (!user?.passwordHash) {
+    await argon2.hash(password, hashOptions);
+    return null;
+  }
+  return await argon2.verify(user.passwordHash, password) ? user : null;
+}
+
 export async function findOrCreateOAuthUser({ provider, subject, email, emailVerified, displayName }) {
   const linked = await User.findOne({ identities: { $elemMatch: { provider, subject } } });
   if (linked) return linked;
