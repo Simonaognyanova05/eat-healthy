@@ -51,7 +51,7 @@ export function RegisterPage({ onAuthenticated = ignoreAuthentication }) {
     }
   }
 
-  if (!ready) return <main className="boot" aria-live="polite"><BrandMark /><span>Подготвяме масата…</span></main>;
+  if (!ready) return <main className="boot" aria-live="polite"><BrandMark /><span>Подготвяме FitFridge…</span></main>;
   if (status.type === "success") return <main className="success-page">
     <section className="success-card">
       <span className="success-icon"><Check size={28} /></span><BrandMark />
@@ -63,12 +63,12 @@ export function RegisterPage({ onAuthenticated = ignoreAuthentication }) {
   </main>;
 
   return <main className="register-shell">
-    <section className="story-panel" aria-label="За Маса">
+    <section className="story-panel" aria-label="За FitFridge">
       <BrandMark />
       <div className="story-content">
         <p className="eyebrow"><Leaf size={14} /> По-малко разхищение. Повече вкус.</p>
         <h1>Добрата храна<br />започва с това,<br /><em>което вече имаш.</em></h1>
-        <p className="story-copy">Снимай продуктите у дома и открий идеи, създадени точно за твоята маса.</p>
+        <p className="story-copy">Снимай продуктите у дома и открий идеи, създадени точно за твоята кухня.</p>
       </div>
       <p className="privacy-note"><LockKeyhole size={16} /> Снимките и данните ти остават поверителни.</p>
     </section>

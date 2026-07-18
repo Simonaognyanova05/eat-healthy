@@ -4,7 +4,7 @@ import { createApp } from "./app.js";
 
 const env = loadEnv();
 await mongoose.connect(env.MONGODB_URI);
-const server = createApp(env).listen(env.PORT, () => console.log(`Eat Healthy API listening on :${env.PORT}`));
+const server = createApp(env).listen(env.PORT, () => console.log(`FitFridge API listening on :${env.PORT}`));
 async function shutdown() {
   server.close(async () => { await mongoose.disconnect(); process.exit(0); });
 }
