@@ -44,7 +44,7 @@ router.post("/logout", async (req, res, next) => {
 router.get("/oauth/:provider/start", authLimit, async (req, res, next) => {
   try {
     const { provider } = req.params;
-    if (!["google", "apple"].includes(provider)) return res.status(404).end();
+    if (provider !== "google") return res.status(404).end();
     const env = req.app.locals.env;
     const client = providerClient(provider, env);
     if (!client) return res.redirect(`${env.APP_ORIGIN}/register?error=provider_unavailable`);
@@ -52,11 +52,8 @@ router.get("/oauth/:provider/start", authLimit, async (req, res, next) => {
     const codeVerifier = arctic.generateCodeVerifier();
     const nonce = randomToken(24);
     await OAuthFlow.create({ stateHash: tokenHash(state, env.SESSION_SECRET), provider, codeVerifier, nonce, expiresAt: new Date(Date.now() + 10 * 60 * 1000) });
-    const url = provider === "google"
-      ? client.createAuthorizationURL(state, codeVerifier, ["openid", "profile", "email"])
-      : client.createAuthorizationURL(state, ["name", "email"]);
+    const url = client.createAuthorizationURL(state, codeVerifier, ["openid", "profile", "email"]);
     url.searchParams.set("nonce", nonce);
-    if (provider === "apple") url.searchParams.set("response_mode", "form_post");
     res.redirect(url.toString());
   } catch (error) { next(error); }
 });
@@ -72,23 +69,32 @@ async function oauthCallback(req, res) {
     if (!flow) throw new Error("invalid_state");
     const client = providerClient(provider, env);
     if (!client) throw new Error("provider_unavailable");
-    const tokens = provider === "google"
-      ? await client.validateAuthorizationCode(code, flow.codeVerifier)
-      : await client.validateAuthorizationCode(code);
-    const claims = await verifiedClaims(provider, tokens.idToken(), flow.nonce, env);
+    const tokens = await client.validateAuthorizationCode(code, flow.codeVerifier);
+    const claims = await verifiedClaims(tokens.idToken(), flow.nonce, env);
     const email = typeof claims.email === "string" ? claims.email.toLowerCase() : undefined;
     const emailVerified = claims.email_verified === true || claims.email_verified === "true";
-    const appleUser = req.body?.user ? JSON.parse(req.body.user) : null;
-    const displayName = typeof claims.name === "string" ? claims.name : [appleUser?.name?.firstName, appleUser?.name?.lastName].filter(Boolean).join(" ") || "Нов кулинар";
+    const displayName = typeof claims.name === "string" ? claims.name : "Нов кулинар";
     const user = await findOrCreateOAuthUser({ provider, subject: claims.sub, email, emailVerified, displayName });
     const token = await createSession(user.id, env.SESSION_SECRET);
     res.cookie("eh_session", token, cookieOptions(env));
     return res.redirect(`${env.APP_ORIGIN}/register?success=1`);
   } catch (error) {
-    const reason = error?.code === "IDENTITY_LINK_REQUIRED" ? "link_required" : "oauth_failed";
+    let reason = "oauth_failed";
+    if (error?.code === "IDENTITY_LINK_REQUIRED") reason = "link_required";
+    else if (error instanceof arctic.OAuth2RequestError) reason = "provider_rejected";
+    else if (error?.message === "invalid_state") reason = "oauth_session_expired";
+    else if (typeof error?.code === "string" && /^(ERR_JWT|ERR_JWS|ERR_JOSE)/.test(error.code)) reason = "token_invalid";
+    if (env.NODE_ENV !== "production") {
+      console.error("oauth_callback_failed", {
+        provider,
+        category: reason,
+        errorName: error?.name,
+        errorCode: typeof error?.code === "string" ? error.code : undefined,
+        rejectedClaim: typeof error?.claim === "string" ? error.claim : undefined
+      });
+    }
     return res.redirect(`${env.APP_ORIGIN}/register?error=${reason}`);
   }
 }
 router.get("/oauth/:provider/callback", oauthCallback);
-router.post("/oauth/:provider/callback", oauthCallback);
 export default router;

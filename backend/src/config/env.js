@@ -10,12 +10,7 @@ const schema = z.object({
   SESSION_SECRET: z.string().min(32),
   GOOGLE_CLIENT_ID: z.preprocess(blankToUndefined, z.string().optional()),
   GOOGLE_CLIENT_SECRET: z.preprocess(blankToUndefined, z.string().optional()),
-  GOOGLE_REDIRECT_URI: z.preprocess(blankToUndefined, z.string().url().optional()),
-  APPLE_CLIENT_ID: z.preprocess(blankToUndefined, z.string().optional()),
-  APPLE_TEAM_ID: z.preprocess(blankToUndefined, z.string().optional()),
-  APPLE_KEY_ID: z.preprocess(blankToUndefined, z.string().optional()),
-  APPLE_PRIVATE_KEY_BASE64: z.preprocess(blankToUndefined, z.string().optional()),
-  APPLE_REDIRECT_URI: z.preprocess(blankToUndefined, z.string().url().optional())
+  GOOGLE_REDIRECT_URI: z.preprocess(blankToUndefined, z.string().url().optional())
 });
 
 export function loadEnv(source = process.env) {

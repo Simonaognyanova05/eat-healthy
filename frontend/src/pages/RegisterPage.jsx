@@ -4,15 +4,19 @@ import { BrandMark } from "../components/BrandMark.jsx";
 import { getSession, oauthUrl, register } from "../services/authApi.js";
 
 const initial = { displayName: "", email: "", password: "" };
+const ignoreAuthentication = () => {};
 const queryMessage = () => {
   const error = new URLSearchParams(window.location.search).get("error");
   if (error === "provider_unavailable") return "Този начин за регистрация още не е активиран.";
   if (error === "link_required") return "Този имейл вече има профил. Влез с първоначалния начин.";
+  if (error === "provider_rejected") return "Google отхвърли заявката. Провери Client secret и точния redirect URI.";
+  if (error === "oauth_session_expired") return "Заявката за Google е изтекла или вече е използвана. Започни отново.";
+  if (error === "token_invalid") return "Google самоличността не можа да бъде потвърдена. Провери Client ID.";
   if (error) return "Регистрацията не завърши. Можеш да опиташ отново.";
   return "";
 };
 
-export function RegisterPage() {
+export function RegisterPage({ onAuthenticated = ignoreAuthentication }) {
   const [values, setValues] = useState(initial);
   const [ready, setReady] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -21,13 +25,15 @@ export function RegisterPage() {
   useEffect(() => {
     getSession()
       .then(({ user }) => {
-        if (user || new URLSearchParams(window.location.search).get("success")) {
+        if (user) {
+          onAuthenticated(user);
+        } else if (new URLSearchParams(window.location.search).get("success")) {
           setStatus({ type: "success", message: `Добре дошъл${user?.displayName ? `, ${user.displayName}` : ""}. Профилът ти е готов.` });
         }
       })
       .catch(() => setStatus({ type: "error", message: "Няма връзка със сървъра. Провери връзката и опитай пак." }))
       .finally(() => setReady(true));
-  }, []);
+  }, [onAuthenticated]);
 
   const update = (event) => setValues((current) => ({ ...current, [event.target.name]: event.target.value }));
   async function submit(event) {
@@ -37,7 +43,7 @@ export function RegisterPage() {
     try {
       const result = await register(values);
       setStatus(result.user
-        ? { type: "success", message: `Добре дошъл, ${result.user.displayName}. Профилът ти е готов.` }
+        ? { type: "success", message: `Добре дошъл, ${result.user.displayName}. Профилът ти е готов.`, user: result.user }
         : { type: "success", message: "Заявката е приета. Ако адресът вече има профил, използвай вход." });
       setValues(initial);
     } catch (error) {
@@ -52,7 +58,7 @@ export function RegisterPage() {
       <p className="eyebrow">Всичко е готово</p>
       <h1>Твоята кухня,<br />с ново вдъхновение.</h1>
       <p>{status.message}</p>
-      <button className="primary-button">Продължи към началото <ArrowRight size={18} /></button>
+      <button className="primary-button" onClick={() => status.user && onAuthenticated(status.user)}>Продължи към началото <ArrowRight size={18} /></button>
     </section>
   </main>;
 
@@ -73,7 +79,6 @@ export function RegisterPage() {
         <header><p className="step">01 · Създай профил</p><h2>Добре дошъл</h2><p>Нека започнем с най-лесното.</p></header>
         <div className="social-grid">
           <a className="social-button" href={oauthUrl("google")}><span className="google-g" aria-hidden="true">G</span> Google</a>
-          <a className="social-button apple" href={oauthUrl("apple")}><span aria-hidden="true">●</span> Apple</a>
         </div>
         <div className="divider"><span>или с имейл</span></div>
         <form onSubmit={submit} noValidate>

@@ -28,4 +28,9 @@ describe("registration boundaries", () => {
     expect(response.headers["x-powered-by"]).toBeUndefined();
     expect(response.body.error.code).toBe("NOT_FOUND");
   });
+
+  it("does not expose the deferred Apple OAuth provider", async () => {
+    const response = await request(createApp(env)).get("/api/v1/auth/oauth/apple/start");
+    expect(response.status).toBe(404);
+  });
 });

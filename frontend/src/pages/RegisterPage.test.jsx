@@ -18,11 +18,11 @@ beforeEach(() => {
   getSession.mockResolvedValue({ user: null });
 });
 
-it("offers all three registration methods with accessible fields", async () => {
+it("offers Google and email registration with accessible fields", async () => {
   render(<RegisterPage />);
   await waitFor(() => expect(screen.getByRole("heading", { name: "Добре дошъл" })).toBeInTheDocument());
   expect(screen.getByRole("link", { name: /Google/ })).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: /Apple/ })).toBeInTheDocument();
+  expect(screen.queryByRole("link", { name: /Apple/ })).not.toBeInTheDocument();
   expect(screen.getByLabelText("Имейл")).toBeInTheDocument();
   expect(screen.getByLabelText("Парола")).toBeInTheDocument();
 });

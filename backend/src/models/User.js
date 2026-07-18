@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 const identitySchema = new mongoose.Schema({
-  provider: { type: String, enum: ["email", "google", "apple"], required: true },
+  provider: { type: String, enum: ["email", "google"], required: true },
   subject: { type: String, required: true },
   email: { type: String },
   emailVerified: { type: Boolean, default: false }

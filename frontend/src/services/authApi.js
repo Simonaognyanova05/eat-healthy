@@ -23,4 +23,5 @@ export async function getSession() {
   return data;
 }
 export const register = (values) => request("/auth/register", { method: "POST", body: JSON.stringify(values) });
+export const logout = () => request("/auth/logout", { method: "POST" });
 export const oauthUrl = (provider) => `${API_URL}/auth/oauth/${provider}/start`;
