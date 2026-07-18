@@ -7,6 +7,7 @@ import { registerSchema } from "../src/validation/authSchemas.js";
 const env = loadEnv({
   NODE_ENV: "test", PORT: "4000", MONGODB_URI: "mongodb://localhost/test",
   APP_ORIGIN: "http://localhost:5173", SESSION_SECRET: "a-secure-test-secret-that-is-long-enough"
+  , OPENAI_API_KEY: "test-openai-key-that-is-long-enough", OPENAI_MODEL: "gpt-5.4-mini"
 });
 
 describe("registration boundaries", () => {

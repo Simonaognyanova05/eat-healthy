@@ -8,6 +8,8 @@ const schema = z.object({
   MONGODB_URI: z.string().min(1),
   APP_ORIGIN: z.string().url(),
   SESSION_SECRET: z.string().min(32),
+  OPENAI_API_KEY: z.string().min(20),
+  OPENAI_MODEL: z.literal("gpt-5.4-mini").default("gpt-5.4-mini"),
   GOOGLE_CLIENT_ID: z.preprocess(blankToUndefined, z.string().optional()),
   GOOGLE_CLIENT_SECRET: z.preprocess(blankToUndefined, z.string().optional()),
   GOOGLE_REDIRECT_URI: z.preprocess(blankToUndefined, z.string().url().optional())
