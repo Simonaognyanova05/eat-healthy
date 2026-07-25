@@ -34,11 +34,17 @@ router.post("/register", authLimit, async (req, res, next) => {
     const parsed = registerSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: { code: "INVALID_REGISTRATION", message: "Провери въведените данни." } });
     const user = await registerWithEmail(parsed.data);
-    if (user) {
-      const token = await createSession(user.id, req.app.locals.env.SESSION_SECRET);
-      res.cookie("eh_session", token, cookieOptions(req.app.locals.env));
+    if (!user) {
+      return res.status(409).json({
+        error: {
+          code: "REGISTRATION_NOT_COMPLETED",
+          message: "Профилът не беше създаден. Ако вече имаш профил, използвай вход."
+        }
+      });
     }
-    res.status(201).json({ data: { accepted: true, user: user ? publicUser(user) : null } });
+    const token = await createSession(user.id, req.app.locals.env.SESSION_SECRET);
+    res.cookie("eh_session", token, cookieOptions(req.app.locals.env));
+    return res.status(201).json({ data: { accepted: true, user: publicUser(user) } });
   } catch (error) { next(error); }
 });
 

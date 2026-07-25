@@ -3,6 +3,7 @@ import request from "supertest";
 import { createApp } from "../src/app.js";
 import { loadEnv } from "../src/config/env.js";
 import { loginSchema, registerSchema } from "../src/validation/authSchemas.js";
+import { User } from "../src/models/User.js";
 
 const env = loadEnv({
   NODE_ENV: "test", PORT: "4000", MONGODB_URI: "mongodb://localhost/test",
@@ -20,6 +21,25 @@ describe("registration boundaries", () => {
     const valid = { displayName: "Ива", email: "iva@example.com", password: "correct horse battery staple" };
     expect(registerSchema.safeParse({ ...valid, passwordConfirmation: valid.password }).success).toBe(true);
     expect(registerSchema.safeParse({ ...valid, passwordConfirmation: "a different secure passphrase" }).success).toBe(false);
+  });
+
+  it("canonicalizes email case before duplicate checks", () => {
+    const result = registerSchema.safeParse({
+      displayName: "Ива",
+      email: "  IVA@EXAMPLE.COM  ",
+      password: "correct horse battery staple",
+      passwordConfirmation: "correct horse battery staple"
+    });
+    expect(result.success).toBe(true);
+    expect(result.data.email).toBe("iva@example.com");
+  });
+
+  it("enforces unique emails and provider identities at the database boundary", () => {
+    const indexes = User.schema.indexes();
+    expect(indexes).toEqual(expect.arrayContaining([
+      [{ email: 1 }, expect.objectContaining({ unique: true })],
+      [{ "identities.provider": 1, "identities.subject": 1 }, expect.objectContaining({ unique: true })]
+    ]));
   });
 
   it("accepts only bounded login credentials and rejects extra privilege fields", () => {

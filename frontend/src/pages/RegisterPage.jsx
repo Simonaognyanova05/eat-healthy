@@ -43,9 +43,7 @@ export function RegisterPage({ onAuthenticated = ignoreAuthentication, onGoToLog
     setStatus({ type: "loading", message: "Създаваме профила ти…" });
     try {
       const result = await register(values);
-      setStatus(result.user
-        ? { type: "success", message: `Добре дошъл, ${result.user.displayName}. Профилът ти е готов.`, user: result.user }
-        : { type: "success", message: "Заявката е приета. Ако адресът вече има профил, използвай вход." });
+      setStatus({ type: "success", message: `Добре дошъл, ${result.user.displayName}. Профилът ти е готов.`, user: result.user });
       setValues(initial);
     } catch (error) {
       setStatus({ type: "error", message: error.message });
