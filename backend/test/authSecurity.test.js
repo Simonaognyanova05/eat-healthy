@@ -41,6 +41,13 @@ describe("registration boundaries", () => {
     expect(response.body.error.code).toBe("NOT_FOUND");
   });
 
+  it("keeps unknown API routes as JSON in production", async () => {
+    const productionEnv = { ...env, NODE_ENV: "production" };
+    const response = await request(createApp(productionEnv)).get("/api/v1/missing");
+    expect(response.status).toBe(404);
+    expect(response.body.error.code).toBe("NOT_FOUND");
+  });
+
   it("does not expose the deferred Apple OAuth provider", async () => {
     const response = await request(createApp(env)).get("/api/v1/auth/oauth/apple/start");
     expect(response.status).toBe(404);
