@@ -16,6 +16,12 @@ describe("registration boundaries", () => {
     expect(registerSchema.safeParse({ displayName: "Ива", email: "iva@example.com", password: "correct horse battery staple", admin: true }).success).toBe(false);
   });
 
+  it("requires matching passwords during registration", () => {
+    const valid = { displayName: "Ива", email: "iva@example.com", password: "correct horse battery staple" };
+    expect(registerSchema.safeParse({ ...valid, passwordConfirmation: valid.password }).success).toBe(true);
+    expect(registerSchema.safeParse({ ...valid, passwordConfirmation: "a different secure passphrase" }).success).toBe(false);
+  });
+
   it("accepts only bounded login credentials and rejects extra privilege fields", () => {
     expect(loginSchema.safeParse({ email: "iva@example.com", password: "a password", admin: true }).success).toBe(false);
     expect(loginSchema.safeParse({ email: "not-email", password: "a password" }).success).toBe(false);
