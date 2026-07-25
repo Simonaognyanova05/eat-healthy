@@ -41,6 +41,12 @@ describe("registration boundaries", () => {
     expect(response.body.error.code).toBe("NOT_FOUND");
   });
 
+  it("reports API readiness at the service root", async () => {
+    const response = await request(createApp(env)).get("/");
+    expect(response.status).toBe(200);
+    expect(response.body.data).toEqual({ service: "FitFridge API", status: "ok" });
+  });
+
   it("keeps unknown API routes as JSON in production", async () => {
     const productionEnv = { ...env, NODE_ENV: "production" };
     const response = await request(createApp(productionEnv)).get("/api/v1/missing");

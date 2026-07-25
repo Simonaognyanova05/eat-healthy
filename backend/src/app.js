@@ -2,14 +2,10 @@ import express from "express";
 import helmet from "helmet";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import authRoutes from "./routes/authRoutes.js";
 import recognitionRoutes from "./routes/recognitionRoutes.js";
 import recipeRoutes from "./routes/recipeRoutes.js";
 import { csrfCookie, requireCsrf } from "./middleware/security.js";
-
-const frontendBuildPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../frontend/build");
 
 export function createApp(env) {
   const app = express();
@@ -25,14 +21,8 @@ export function createApp(env) {
   app.use("/api/v1/auth", requireCsrf, authRoutes);
   app.use("/api/v1/recognitions", requireCsrf, recognitionRoutes);
   app.use("/api/v1/recipes", requireCsrf, recipeRoutes);
+  app.get("/", (_req, res) => res.json({ data: { service: "FitFridge API", status: "ok" } }));
   app.get("/api/v1/health", (_req, res) => res.json({ data: { status: "ok" } }));
-  if (env.NODE_ENV !== "test") {
-    app.use(express.static(frontendBuildPath, { index: false }));
-    app.get("/{*path}", (req, res, next) => {
-      if (req.path.startsWith("/api/")) return next();
-      return res.sendFile(path.join(frontendBuildPath, "index.html"));
-    });
-  }
   app.use((_req, res) => res.status(404).json({ error: { code: "NOT_FOUND", message: "Ресурсът не е намерен." } }));
   app.use((error, _req, res, _next) => {
     if (error?.code === "INVALID_FILE_TYPE") return res.status(415).json({ error: { code: "INVALID_IMAGE", message: "Избери само JPG, PNG или WebP снимки." } });
