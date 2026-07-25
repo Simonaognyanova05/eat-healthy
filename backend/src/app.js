@@ -26,7 +26,7 @@ export function createApp(env) {
   app.use("/api/v1/recognitions", requireCsrf, recognitionRoutes);
   app.use("/api/v1/recipes", requireCsrf, recipeRoutes);
   app.get("/api/v1/health", (_req, res) => res.json({ data: { status: "ok" } }));
-  if (env.NODE_ENV === "production") {
+  if (env.NODE_ENV !== "test") {
     app.use(express.static(frontendBuildPath, { index: false }));
     app.get("/{*path}", (req, res, next) => {
       if (req.path.startsWith("/api/")) return next();
