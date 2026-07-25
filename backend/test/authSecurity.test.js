@@ -47,6 +47,14 @@ describe("registration boundaries", () => {
     expect(response.body.data).toEqual({ service: "FitFridge API", status: "ok" });
   });
 
+  it("allows the production CSRF cookie on the separately hosted frontend", async () => {
+    const productionEnv = { ...env, NODE_ENV: "production" };
+    const response = await request(createApp(productionEnv)).get("/");
+    const csrfCookie = response.headers["set-cookie"]?.find((cookie) => cookie.startsWith("eh_csrf="));
+    expect(csrfCookie).toContain("Secure");
+    expect(csrfCookie).toContain("SameSite=None");
+  });
+
   it("keeps unknown API routes as JSON in production", async () => {
     const productionEnv = { ...env, NODE_ENV: "production" };
     const response = await request(createApp(productionEnv)).get("/api/v1/missing");

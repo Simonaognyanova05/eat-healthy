@@ -4,7 +4,13 @@ export function csrfCookie(req, res, next) {
   let token = req.cookies.eh_csrf;
   if (!token) {
     token = randomToken(24);
-    res.cookie("eh_csrf", token, { httpOnly: false, secure: req.app.locals.env.NODE_ENV === "production", sameSite: "strict", path: "/" });
+    const isProduction = req.app.locals.env.NODE_ENV === "production";
+    res.cookie("eh_csrf", token, {
+      httpOnly: false,
+      secure: isProduction,
+      sameSite: isProduction ? "none" : "strict",
+      path: "/"
+    });
   }
   req.csrfToken = token;
   next();

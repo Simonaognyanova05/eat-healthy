@@ -10,7 +10,16 @@ import { randomToken, tokenHash } from "../utils/crypto.js";
 
 const router = Router();
 const authLimit = rateLimit({ windowMs: 15 * 60 * 1000, limit: 12, standardHeaders: true, legacyHeaders: false });
-const cookieOptions = (env) => ({ httpOnly: true, secure: env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: 30 * 24 * 60 * 60 * 1000 });
+const cookieOptions = (env) => {
+  const isProduction = env.NODE_ENV === "production";
+  return {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
+    path: "/",
+    maxAge: 30 * 24 * 60 * 60 * 1000
+  };
+};
 const publicUser = (user) => ({ id: user.id, email: user.email, displayName: user.displayName, emailVerified: user.emailVerified });
 
 router.get("/session", async (req, res, next) => {
@@ -48,7 +57,8 @@ router.post("/login", authLimit, async (req, res, next) => {
 router.post("/logout", async (req, res, next) => {
   try {
     await deleteSession(req.cookies.eh_session, req.app.locals.env.SESSION_SECRET);
-    res.clearCookie("eh_session", { path: "/" });
+    const { maxAge: _maxAge, ...clearOptions } = cookieOptions(req.app.locals.env);
+    res.clearCookie("eh_session", clearOptions);
     res.status(204).end();
   } catch (error) { next(error); }
 });
