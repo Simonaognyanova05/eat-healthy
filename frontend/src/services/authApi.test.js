@@ -1,4 +1,4 @@
-import { getSession, recognizeIngredients } from "./authApi";
+import { getRecognitionUsage, getSession, recognizeIngredients } from "./authApi";
 
 afterEach(() => {
   jest.restoreAllMocks();
@@ -30,4 +30,18 @@ it("returns a clear Bulgarian message when the API is unreachable", async () => 
   await expect(getSession()).rejects.toThrow(
     "Няма връзка със сървъра. Провери дали backend-ът работи и опитай отново."
   );
+});
+
+it("preserves machine-readable limit details from the API", async () => {
+  jest.spyOn(global, "fetch").mockResolvedValue({
+    ok: false,
+    status: 429,
+    json: async () => ({ error: { code: "MONTHLY_IMAGE_LIMIT", message: "Лимитът е достигнат.", details: { usage: { remaining: 0 } } } })
+  });
+
+  await expect(getRecognitionUsage()).rejects.toMatchObject({
+    code: "MONTHLY_IMAGE_LIMIT",
+    status: 429,
+    details: { usage: { remaining: 0 } }
+  });
 });

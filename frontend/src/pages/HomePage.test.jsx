@@ -1,16 +1,25 @@
 import "@testing-library/jest-dom";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { HomePage } from "./HomePage";
-import { generateRecipes, recognizeIngredients } from "../services/authApi";
+import { generateRecipes, getRecognitionUsage, recognizeIngredients } from "../services/authApi";
 
-jest.mock("../services/authApi", () => ({ logout: jest.fn(), recognizeIngredients: jest.fn(), generateRecipes: jest.fn() }));
+jest.mock("../services/authApi", () => ({ logout: jest.fn(), recognizeIngredients: jest.fn(), generateRecipes: jest.fn(), getRecognitionUsage: jest.fn() }));
 
 beforeAll(() => {
   URL.createObjectURL = jest.fn(() => "blob:preview"); URL.revokeObjectURL = jest.fn();
   Object.defineProperty(navigator, "mediaDevices", { configurable: true, value: { getUserMedia: jest.fn().mockResolvedValue({ getTracks: () => [{ stop: jest.fn() }] }) } });
   HTMLMediaElement.prototype.play = jest.fn().mockResolvedValue();
 });
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  jest.clearAllMocks();
+  getRecognitionUsage.mockImplementation(() => new Promise(() => {}));
+});
+
+it("shows the server-provided daily recognition allowance", async () => {
+  getRecognitionUsage.mockResolvedValue({ plan: "free", used: 0, limit: 50, remaining: 50, resetAt: "2026-08-01T00:00:00.000Z" });
+  render(<HomePage user={{ displayName: "Ива" }} onLoggedOut={jest.fn()} />);
+  expect(await screen.findByText("50 от 50 снимки остават този месец")).toBeInTheDocument();
+});
 
 it("opens the camera flow", async () => {
   render(<HomePage user={{ displayName: "Ива" }} onLoggedOut={jest.fn()} />);
