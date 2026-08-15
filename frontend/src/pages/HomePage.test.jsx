@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { HomePage } from "./HomePage";
-import { generateRecipes, getMyPlanRequest, getRecognitionUsage, recognizeIngredients } from "../services/authApi";
+import { generateRecipes, getMyPlanRequest, getProfile, getRecognitionUsage, recognizeIngredients } from "../services/authApi";
 
 jest.mock("../services/authApi", () => ({
   logout: jest.fn(),
@@ -12,6 +12,7 @@ jest.mock("../services/authApi", () => ({
   createPlanRequest: jest.fn(),
   getAdminPlanRequests: jest.fn(),
   decidePlanRequest: jest.fn()
+  , getProfile: jest.fn(), saveProfile: jest.fn()
 }));
 
 beforeAll(() => {
@@ -23,6 +24,14 @@ beforeEach(() => {
   jest.clearAllMocks();
   getRecognitionUsage.mockImplementation(() => new Promise(() => {}));
   getMyPlanRequest.mockImplementation(() => new Promise(() => {}));
+  getProfile.mockResolvedValue({ profile: null });
+});
+
+it("opens the private nutrition profile", async () => {
+  render(<HomePage user={{ displayName: "Ива" }} onLoggedOut={jest.fn()} />);
+  fireEvent.click(screen.getByRole("button", { name: "Профил" }));
+  expect(await screen.findByRole("heading", { name: "Профил и цел" })).toBeInTheDocument();
+  expect(screen.getByLabelText("Години")).toBeInTheDocument();
 });
 
 it("shows the server-provided daily recognition allowance", async () => {

@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { Camera, Crown, ImagePlus, Leaf, LoaderCircle, LogOut, ShieldCheck, Trash2, Upload, X } from "lucide-react";
+import { Camera, Crown, ImagePlus, Leaf, LoaderCircle, LogOut, ShieldCheck, Trash2, Upload, UserRound, X } from "lucide-react";
 import { BrandMark } from "../components/BrandMark";
 import { CameraDialog } from "../components/CameraDialog";
 import { IngredientReview } from "../components/IngredientReview";
 import { ConfirmedIngredients } from "../components/ConfirmedIngredients";
 import { RecipeResults } from "../components/RecipeResults";
 import { AdminPlanRequests } from "../components/AdminPlanRequests";
+import { ProfileDialog } from "../components/ProfileDialog";
 import { createPlanRequest, generateRecipes, getMyPlanRequest, getRecognitionUsage, logout, recognizeIngredients } from "../services/authApi";
 import "../styles/home.css";
 import "../styles/recognition.css";
@@ -33,6 +34,7 @@ export function HomePage({ user, onLoggedOut }) {
   const [usage, setUsage] = useState(null);
   const [plansOpen, setPlansOpen] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const [planRequest, setPlanRequest] = useState(null);
   const [requestingPlan, setRequestingPlan] = useState("");
 
@@ -100,7 +102,7 @@ export function HomePage({ user, onLoggedOut }) {
   }
 
   return <main className="home-page">
-    <header className="home-header"><BrandMark /><div className="home-account"><span>{user?.displayName || "Твоята кухня"}</span>{user?.role === "admin" && <button className="admin-link" onClick={() => setAdminOpen(true)}><ShieldCheck size={16} /> Заявки</button>}<button className="logout-button" onClick={handleLogout} disabled={loggingOut}><LogOut size={16} /> {loggingOut ? "Излизане…" : "Изход"}</button></div></header>
+    <header className="home-header"><BrandMark /><div className="home-account"><span>{user?.displayName || "Твоята кухня"}</span><button className="admin-link" onClick={() => setProfileOpen(true)}><UserRound size={16} /> Профил</button>{user?.role === "admin" && <button className="admin-link" onClick={() => setAdminOpen(true)}><ShieldCheck size={16} /> Заявки</button>}<button className="logout-button" onClick={handleLogout} disabled={loggingOut}><LogOut size={16} /> {loggingOut ? "Излизане…" : "Изход"}</button></div></header>
     {status === "review" ? <IngredientReview result={result} ingredients={ingredients} onChange={setIngredients} onRestart={restart} onConfirm={() => setStatus("confirmed")} /> : status === "confirmed" ? <ConfirmedIngredients ingredients={ingredients} onEdit={() => setStatus("review")} onGenerate={createRecipes} generating={recipeStatus === "loading"} error={recipeError} /> : status === "recipes" ? <RecipeResults recipes={recipes} onBack={() => setStatus("confirmed")} onRestart={restart} /> : <section className="capture-hero">
       <p className="home-eyebrow"><Leaf size={14} /> Започни с това, което имаш</p><h1>Какво има<br />в твоята кухня?</h1>
       <p className="home-intro">Покажи ни хладилника, шкафа или продуктите на масата. Ясната снимка помага да открием повече съставки.</p>
@@ -131,5 +133,6 @@ export function HomePage({ user, onLoggedOut }) {
       </section>
     </div>}
     <AdminPlanRequests open={adminOpen} onClose={() => setAdminOpen(false)} />
+    <ProfileDialog open={profileOpen} onClose={() => setProfileOpen(false)} />
   </main>;
 }
