@@ -31,6 +31,7 @@ export function HomePage({ user, onLoggedOut }) {
   const [recipes, setRecipes] = useState([]);
   const [recipeStatus, setRecipeStatus] = useState("idle");
   const [recipeError, setRecipeError] = useState("");
+  const [recipePersonalization, setRecipePersonalization] = useState(null);
   const [usage, setUsage] = useState(null);
   const [plansOpen, setPlansOpen] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
@@ -82,11 +83,14 @@ export function HomePage({ user, onLoggedOut }) {
       } else { setError(requestError.message); setStatus("error"); }
     }
   }
-  function restart() { selections.forEach(({ previewUrl }) => URL.revokeObjectURL(previewUrl)); setSelections([]); setResult(null); setIngredients([]); setRecipes([]); setRecipeStatus("idle"); setRecipeError(""); setError(""); setStatus("capture"); }
+  function restart() { selections.forEach(({ previewUrl }) => URL.revokeObjectURL(previewUrl)); setSelections([]); setResult(null); setIngredients([]); setRecipes([]); setRecipePersonalization(null); setRecipeStatus("idle"); setRecipeError(""); setError(""); setStatus("capture"); }
   async function createRecipes() {
     setRecipeStatus("loading"); setRecipeError("");
-    try { const data = await generateRecipes(ingredients); setRecipes(data.recipes || []); setRecipeStatus("success"); setStatus("recipes"); }
-    catch (requestError) { setRecipeStatus("error"); setRecipeError(requestError.message); }
+    try { const data = await generateRecipes(ingredients); setRecipes(data.recipes || []); setRecipePersonalization(data.personalization || null); setRecipeStatus("success"); setStatus("recipes"); }
+    catch (requestError) {
+      setRecipeStatus("error"); setRecipeError(requestError.message);
+      if (requestError.code === "PROFILE_REQUIRED") setProfileOpen(true);
+    }
   }
   async function handleLogout() {
     setLoggingOut(true);
@@ -108,7 +112,7 @@ export function HomePage({ user, onLoggedOut }) {
 
   return <main className="home-page">
     <header className="home-header"><BrandMark /><div className="home-account"><span>{user?.displayName || "Твоята кухня"}</span><button className="admin-link" onClick={() => setProfileOpen(true)}><UserRound size={16} /> Профил</button>{user?.role === "admin" && <button className="admin-link" onClick={() => setAdminOpen(true)}><ShieldCheck size={16} /> Заявки</button>}<button className="logout-button" onClick={handleLogout} disabled={loggingOut}><LogOut size={16} /> {loggingOut ? "Излизане…" : "Изход"}</button></div></header>
-    {status === "review" ? <IngredientReview result={result} ingredients={ingredients} onChange={setIngredients} onRestart={restart} onConfirm={() => setStatus("confirmed")} /> : status === "confirmed" ? <ConfirmedIngredients ingredients={ingredients} onEdit={() => setStatus("review")} onGenerate={createRecipes} generating={recipeStatus === "loading"} error={recipeError} /> : status === "recipes" ? <RecipeResults recipes={recipes} onBack={() => setStatus("confirmed")} onRestart={restart} /> : <section className="capture-hero">
+    {status === "review" ? <IngredientReview result={result} ingredients={ingredients} onChange={setIngredients} onRestart={restart} onConfirm={() => setStatus("confirmed")} /> : status === "confirmed" ? <ConfirmedIngredients ingredients={ingredients} onEdit={() => setStatus("review")} onGenerate={createRecipes} generating={recipeStatus === "loading"} error={recipeError} /> : status === "recipes" ? <RecipeResults recipes={recipes} personalization={recipePersonalization} onBack={() => setStatus("confirmed")} onRestart={restart} /> : <section className="capture-hero">
       <p className="home-eyebrow"><Leaf size={14} /> Започни с това, което имаш</p><h1>Какво има<br />в твоята кухня?</h1>
       <p className="home-intro">Покажи ни хладилника, шкафа или продуктите на масата. Ясната снимка помага да открием повече съставки.</p>
       {usage && <div className={`usage-card ${usage.plan !== "free" ? "is-pro" : ""}`}>

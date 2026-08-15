@@ -89,7 +89,7 @@ it("shows a completed state after confirming the corrected ingredients", async (
 it("generates recipe cards and opens a recipe detail", async () => {
   const recipe = { id: "recipe-1", title: "Омлет със сирене", description: "Бърза рецепта с наличните продукти.", servings: 2, prepMinutes: 15, rating: 5, ingredients: [{ name: "яйца", quantity: "4 броя", available: true }], steps: ["Разбий яйцата.", "Изпечи омлета."], nutrition: { calories: 280, proteinGrams: 24, fatGrams: 18, carbsGrams: 3, source: "ai_estimate", confidence: "medium" } };
   recognizeIngredients.mockResolvedValue({ context: "fridge", warnings: [], ingredients: [{ name: "яйца", confidence: 0.95 }] });
-  generateRecipes.mockResolvedValue({ recipes: [recipe, { ...recipe, id: "recipe-2", title: "Яйца на фурна" }, { ...recipe, id: "recipe-3", title: "Салата със сирене" }] });
+  generateRecipes.mockResolvedValue({ personalization: { goal: "lose", dailyCalories: 1800, dailyProteinGrams: 120, dailyFatGrams: 55 }, recipes: [recipe, { ...recipe, id: "recipe-2", title: "Яйца на фурна" }, { ...recipe, id: "recipe-3", title: "Салата със сирене" }] });
   render(<HomePage user={{ displayName: "Ива" }} onLoggedOut={jest.fn()} />);
   fireEvent.change(screen.getByLabelText("Качи снимки от устройството"), { target: { files: [new File(["image"], "fridge.jpg", { type: "image/jpeg" })] } });
   fireEvent.click(screen.getByRole("button", { name: "Разпознай от снимката" }));
@@ -97,6 +97,8 @@ it("generates recipe cards and opens a recipe detail", async () => {
   fireEvent.click(screen.getByRole("button", { name: "Потвърди продуктите" }));
   fireEvent.click(screen.getByRole("button", { name: "Генерирай" }));
   expect(await screen.findByRole("heading", { name: "Три идеи за днес" })).toBeInTheDocument();
+  expect(screen.getByText(/цел: отслабване/i)).toBeInTheDocument();
+  expect(screen.getAllByText(/Ако изядеш една порция/i)).toHaveLength(3);
   expect(generateRecipes).toHaveBeenCalledWith(expect.arrayContaining([expect.objectContaining({ name: "яйца" })]));
   fireEvent.click(screen.getAllByRole("button", { name: "Виж рецептата" })[0]);
   expect(screen.getByRole("heading", { name: "Омлет със сирене" })).toBeInTheDocument();
