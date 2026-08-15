@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Camera, Crown, ImagePlus, Leaf, LoaderCircle, LogOut, ShieldCheck, Trash2, Upload, UserRound, X } from "lucide-react";
+import { Camera, Check, Copy, Crown, ImagePlus, Leaf, LoaderCircle, LogOut, ShieldCheck, Trash2, Upload, UserRound, X } from "lucide-react";
 import { BrandMark } from "../components/BrandMark";
 import { CameraDialog } from "../components/CameraDialog";
 import { IngredientReview } from "../components/IngredientReview";
@@ -37,6 +37,7 @@ export function HomePage({ user, onLoggedOut }) {
   const [profileOpen, setProfileOpen] = useState(false);
   const [planRequest, setPlanRequest] = useState(null);
   const [requestingPlan, setRequestingPlan] = useState("");
+  const [copiedPayment, setCopiedPayment] = useState("");
 
   useEffect(() => { selectionsRef.current = selections; }, [selections]);
   useEffect(() => () => selectionsRef.current.forEach(({ previewUrl }) => URL.revokeObjectURL(previewUrl)), []);
@@ -100,6 +101,10 @@ export function HomePage({ user, onLoggedOut }) {
     } catch (requestError) { setError(requestError.message); }
     finally { setRequestingPlan(""); }
   }
+  async function copyPayment(value, field) {
+    try { await navigator.clipboard.writeText(value); setCopiedPayment(field); }
+    catch { setError("Не успяхме да копираме. Задръж върху текста и го копирай ръчно."); }
+  }
 
   return <main className="home-page">
     <header className="home-header"><BrandMark /><div className="home-account"><span>{user?.displayName || "Твоята кухня"}</span><button className="admin-link" onClick={() => setProfileOpen(true)}><UserRound size={16} /> Профил</button>{user?.role === "admin" && <button className="admin-link" onClick={() => setAdminOpen(true)}><ShieldCheck size={16} /> Заявки</button>}<button className="logout-button" onClick={handleLogout} disabled={loggingOut}><LogOut size={16} /> {loggingOut ? "Излизане…" : "Изход"}</button></div></header>
@@ -129,7 +134,11 @@ export function HomePage({ user, onLoggedOut }) {
           <article className="featured"><small>PRO</small><strong>€49 <em>/ месец</em></strong><b>1000 снимки / месец</b><span>За активно ежедневно използване.</span><button onClick={() => requestPlan("pro")} disabled={Boolean(requestingPlan) || planRequest?.status === "pending"}>{requestingPlan === "pro" ? "Изпращане…" : planRequest?.status === "pending" ? "Заявката чака" : "Заяви Pro"}</button></article>
         </div>
         {planRequest?.status === "pending" && <div className="plan-request-status" role="status">Заявката за {PLAN_NAMES[planRequest.plan]} е изпратена до администратора.</div>}
-        <small className="plans-note">Заявката не извършва автоматично плащане. Планът се активира след ръчно одобрение.</small>
+        {planRequest?.status === "pending" && planRequest.payment && <section className="bank-payment" aria-labelledby="bank-payment-title">
+          <header><small>БАНКОВ ПРЕВОД</small><h3 id="bank-payment-title">Завърши заявката с плащане</h3><p>Преведи точната сума и посочи основанието без промени. След потвърждение администраторът ще активира плана.</p></header>
+          <dl><div><dt>Сума</dt><dd>€{(planRequest.payment.amountCents / 100).toFixed(0)}</dd></div><div><dt>IBAN</dt><dd><code>{planRequest.payment.iban}</code><button onClick={() => copyPayment(planRequest.payment.iban, "iban")} aria-label="Копирай IBAN">{copiedPayment === "iban" ? <Check size={16} /> : <Copy size={16} />}</button></dd></div><div><dt>Основание</dt><dd><code>{planRequest.payment.reference}</code><button onClick={() => copyPayment(planRequest.payment.reference, "reference")} aria-label="Копирай основанието">{copiedPayment === "reference" ? <Check size={16} /> : <Copy size={16} />}</button></dd></div></dl>
+        </section>}
+        <small className="plans-note">Планът се активира след получен и ръчно потвърден банков превод.</small>
       </section>
     </div>}
     <AdminPlanRequests open={adminOpen} onClose={() => setAdminOpen(false)} />

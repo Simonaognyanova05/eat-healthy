@@ -40,6 +40,16 @@ it("shows the server-provided daily recognition allowance", async () => {
   expect(await screen.findByText("50 от 50 снимки остават този месец")).toBeInTheDocument();
 });
 
+it("shows bank transfer instructions for a pending paid plan", async () => {
+  getRecognitionUsage.mockResolvedValue({ plan: "free", used: 0, limit: 50, remaining: 50, resetAt: "2026-09-01T00:00:00.000Z" });
+  getMyPlanRequest.mockResolvedValue({ request: { id: "request-1", plan: "starter", status: "pending", payment: { iban: "BG46STSA93000030986203", reference: "EH-9DE860EA", amountCents: 1500, currency: "eur" } } });
+  render(<HomePage user={{ displayName: "Ива" }} onLoggedOut={jest.fn()} />);
+  fireEvent.click(await screen.findByRole("button", { name: "Виж плановете" }));
+  expect(await screen.findByText("BG46STSA93000030986203")).toBeInTheDocument();
+  expect(screen.getByText("EH-9DE860EA")).toBeInTheDocument();
+  expect(screen.getAllByText("€15").length).toBeGreaterThan(0);
+});
+
 it("opens the camera flow", async () => {
   render(<HomePage user={{ displayName: "Ива" }} onLoggedOut={jest.fn()} />);
   fireEvent.click(screen.getByRole("button", { name: /Снимай продуктите/ }));

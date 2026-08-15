@@ -40,7 +40,7 @@ router.post("/", requireUser, requestLimit, async (req, res, next) => {
       requestedPlan: parsed.data.plan,
       priceCents: PRICES[parsed.data.plan]
     });
-    return res.status(201).json({ data: { request: serializeRequest(planRequest) } });
+    return res.status(201).json({ data: { request: serializeRequest(planRequest, req.app.locals.env) } });
   } catch (error) {
     if (error?.code === 11000) {
       return res.status(409).json({ error: { code: "PLAN_REQUEST_PENDING", message: "Вече имаш заявка, която чака одобрение." } });
@@ -52,18 +52,18 @@ router.post("/", requireUser, requestLimit, async (req, res, next) => {
 router.get("/mine", requireUser, async (req, res, next) => {
   try {
     const planRequest = await PlanRequest.findOne({ owner: req.authUser._id }).sort({ createdAt: -1 }).lean();
-    return res.json({ data: { request: planRequest ? serializeRequest(planRequest) : null } });
+    return res.json({ data: { request: planRequest ? serializeRequest(planRequest, req.app.locals.env) : null } });
   } catch (error) { return next(error); }
 });
 
-router.get("/admin", requireUser, requireAdmin, async (_req, res, next) => {
+router.get("/admin", requireUser, requireAdmin, async (req, res, next) => {
   try {
     const requests = await PlanRequest.find({ status: "pending" })
       .sort({ createdAt: 1 })
       .limit(100)
       .populate("owner", "email displayName")
       .lean();
-    return res.json({ data: { requests: requests.map(serializeRequest) } });
+    return res.json({ data: { requests: requests.map((item) => serializeRequest(item, req.app.locals.env)) } });
   } catch (error) { return next(error); }
 });
 
@@ -93,12 +93,12 @@ router.patch("/admin/:id", requireUser, requireAdmin, async (req, res, next) => 
       }
     });
     if (!decidedRequest) return res.status(409).json({ error: { code: "REQUEST_ALREADY_DECIDED", message: "Заявката вече е обработена." } });
-    return res.json({ data: { request: serializeRequest(decidedRequest) } });
+    return res.json({ data: { request: serializeRequest(decidedRequest, req.app.locals.env) } });
   } catch (error) { return next(error); }
   finally { await dbSession.endSession(); }
 });
 
-function serializeRequest(item) {
+function serializeRequest(item, env) {
   const owner = item.owner && typeof item.owner === "object" && item.owner.email
     ? { id: item.owner._id.toString(), email: item.owner.email, displayName: item.owner.displayName }
     : undefined;
@@ -110,6 +110,13 @@ function serializeRequest(item) {
     status: item.status,
     createdAt: item.createdAt,
     decidedAt: item.decidedAt,
+    payment: {
+      method: "bank_transfer",
+      iban: env.PAYMENT_IBAN,
+      reference: `EH-${item._id.toString().slice(-8).toUpperCase()}`,
+      amountCents: item.priceCents,
+      currency: item.currency
+    },
     ...(owner && { owner })
   };
 }

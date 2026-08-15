@@ -10,6 +10,7 @@ const schema = z.object({
   SESSION_SECRET: z.string().min(32),
   OPENAI_API_KEY: z.string().min(20),
   OPENAI_MODEL: z.literal("gpt-5.4-mini").default("gpt-5.4-mini"),
+  PAYMENT_IBAN: z.string().regex(/^BG\d{2}[A-Z]{4}\d{14}$/).default("BG46STSA93000030986203"),
   GOOGLE_CLIENT_ID: z.preprocess(blankToUndefined, z.string().optional()),
   GOOGLE_CLIENT_SECRET: z.preprocess(blankToUndefined, z.string().optional()),
   GOOGLE_REDIRECT_URI: z.preprocess(blankToUndefined, z.string().url().optional())
