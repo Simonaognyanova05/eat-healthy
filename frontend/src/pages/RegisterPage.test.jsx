@@ -25,4 +25,5 @@ it("offers Google and email registration with accessible fields", async () => {
   expect(screen.queryByRole("link", { name: /Apple/ })).not.toBeInTheDocument();
   expect(screen.getByLabelText("Имейл")).toBeInTheDocument();
   expect(screen.getByLabelText("Парола")).toBeInTheDocument();
+  expect(screen.getByLabelText("Повтори паролата")).toBeInTheDocument();
 });

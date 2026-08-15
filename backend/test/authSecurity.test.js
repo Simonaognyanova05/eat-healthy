@@ -3,6 +3,7 @@ import request from "supertest";
 import { createApp } from "../src/app.js";
 import { loadEnv } from "../src/config/env.js";
 import { loginSchema, registerSchema } from "../src/validation/authSchemas.js";
+import { User } from "../src/models/User.js";
 
 const env = loadEnv({
   NODE_ENV: "test", PORT: "4000", MONGODB_URI: "mongodb://localhost/test",
@@ -14,6 +15,31 @@ describe("registration boundaries", () => {
   it("rejects weak and malformed registration data", () => {
     expect(registerSchema.safeParse({ displayName: "А", email: "not-email", password: "short" }).success).toBe(false);
     expect(registerSchema.safeParse({ displayName: "Ива", email: "iva@example.com", password: "correct horse battery staple", admin: true }).success).toBe(false);
+  });
+
+  it("requires matching passwords during registration", () => {
+    const valid = { displayName: "Ива", email: "iva@example.com", password: "correct horse battery staple" };
+    expect(registerSchema.safeParse({ ...valid, passwordConfirmation: valid.password }).success).toBe(true);
+    expect(registerSchema.safeParse({ ...valid, passwordConfirmation: "a different secure passphrase" }).success).toBe(false);
+  });
+
+  it("canonicalizes email case before duplicate checks", () => {
+    const result = registerSchema.safeParse({
+      displayName: "Ива",
+      email: "  IVA@EXAMPLE.COM  ",
+      password: "correct horse battery staple",
+      passwordConfirmation: "correct horse battery staple"
+    });
+    expect(result.success).toBe(true);
+    expect(result.data.email).toBe("iva@example.com");
+  });
+
+  it("enforces unique emails and provider identities at the database boundary", () => {
+    const indexes = User.schema.indexes();
+    expect(indexes).toEqual(expect.arrayContaining([
+      [{ email: 1 }, expect.objectContaining({ unique: true })],
+      [{ "identities.provider": 1, "identities.subject": 1 }, expect.objectContaining({ unique: true })]
+    ]));
   });
 
   it("accepts only bounded login credentials and rejects extra privilege fields", () => {
@@ -53,6 +79,24 @@ describe("registration boundaries", () => {
     const csrfCookie = response.headers["set-cookie"]?.find((cookie) => cookie.startsWith("eh_csrf="));
     expect(csrfCookie).toContain("Secure");
     expect(csrfCookie).toContain("SameSite=None");
+  });
+
+  it("allows the local React origin from a private network during development", async () => {
+    const developmentEnv = { ...env, NODE_ENV: "development" };
+    const response = await request(createApp(developmentEnv))
+      .get("/")
+      .set("Origin", "http://192.168.1.171:3000");
+    expect(response.status).toBe(200);
+    expect(response.headers["access-control-allow-origin"]).toBe("http://192.168.1.171:3000");
+  });
+
+  it("does not allow a private-network origin override in production", async () => {
+    const productionEnv = { ...env, NODE_ENV: "production" };
+    const response = await request(createApp(productionEnv))
+      .get("/")
+      .set("Origin", "http://192.168.1.171:3000");
+    expect(response.status).toBe(500);
+    expect(response.headers["access-control-allow-origin"]).toBeUndefined();
   });
 
   it("keeps unknown API routes as JSON in production", async () => {

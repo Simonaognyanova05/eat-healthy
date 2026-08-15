@@ -37,8 +37,17 @@ export async function findOrCreateOAuthUser({ provider, subject, email, emailVer
     error.code = "IDENTITY_LINK_REQUIRED";
     throw error;
   }
-  return User.create({
-    email, emailVerified, displayName,
-    identities: [{ provider, subject, email, emailVerified }]
-  });
+  try {
+    return await User.create({
+      email, emailVerified, displayName,
+      identities: [{ provider, subject, email, emailVerified }]
+    });
+  } catch (error) {
+    if (error?.code !== 11000) throw error;
+    const concurrentlyCreated = await User.findOne({ identities: { $elemMatch: { provider, subject } } });
+    if (concurrentlyCreated) return concurrentlyCreated;
+    const conflict = new Error("identity_link_required");
+    conflict.code = "IDENTITY_LINK_REQUIRED";
+    throw conflict;
+  }
 }

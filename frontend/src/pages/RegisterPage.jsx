@@ -3,7 +3,7 @@ import { ArrowRight, Check, Eye, EyeOff, Leaf, LockKeyhole } from "lucide-react"
 import { BrandMark } from "../components/BrandMark.jsx";
 import { getSession, oauthUrl, register } from "../services/authApi.js";
 
-const initial = { displayName: "", email: "", password: "" };
+const initial = { displayName: "", email: "", password: "", passwordConfirmation: "" };
 const ignoreAuthentication = () => {};
 const queryMessage = () => {
   const error = new URLSearchParams(window.location.search).get("error");
@@ -39,12 +39,11 @@ export function RegisterPage({ onAuthenticated = ignoreAuthentication, onGoToLog
   async function submit(event) {
     event.preventDefault();
     if (values.password.length < 12) return setStatus({ type: "error", message: "Паролата трябва да е поне 12 знака." });
+    if (values.password !== values.passwordConfirmation) return setStatus({ type: "error", message: "Паролите не съвпадат." });
     setStatus({ type: "loading", message: "Създаваме профила ти…" });
     try {
       const result = await register(values);
-      setStatus(result.user
-        ? { type: "success", message: `Добре дошъл, ${result.user.displayName}. Профилът ти е готов.`, user: result.user }
-        : { type: "success", message: "Заявката е приета. Ако адресът вече има профил, използвай вход." });
+      setStatus({ type: "success", message: `Добре дошъл, ${result.user.displayName}. Профилът ти е готов.`, user: result.user });
       setValues(initial);
     } catch (error) {
       setStatus({ type: "error", message: error.message });
@@ -90,6 +89,11 @@ export function RegisterPage({ onAuthenticated = ignoreAuthentication, onGoToLog
             </span>
           </div>
           <p className="password-hint">Използвай дълга и уникална фраза.</p>
+          <div className="field-group"><label htmlFor="passwordConfirmation">Повтори паролата</label>
+            <span className="password-field"><input id="passwordConfirmation" name="passwordConfirmation" type={showPassword ? "text" : "password"} autoComplete="new-password" minLength="12" maxLength="128" required value={values.passwordConfirmation} onChange={update} placeholder="Въведи паролата отново" aria-invalid={Boolean(values.passwordConfirmation && values.password !== values.passwordConfirmation)} />
+              <button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Скрий паролите" : "Покажи паролите"}>{showPassword ? <EyeOff /> : <Eye />}</button>
+            </span>
+          </div>
           {status.message && <p className={`notice ${status.type}`} role="alert">{status.message}</p>}
           <button className="primary-button" disabled={status.type === "loading"}>{status.type === "loading" ? "Създаваме профила…" : <>Създай профил <ArrowRight size={18} /></>}</button>
         </form>

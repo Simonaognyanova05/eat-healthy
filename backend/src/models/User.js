@@ -13,7 +13,11 @@ const userSchema = new mongoose.Schema({
   displayName: { type: String, trim: true, maxlength: 80 },
   passwordHash: { type: String, select: false },
   identities: { type: [identitySchema], default: [] },
-  status: { type: String, enum: ["active", "blocked"], default: "active" }
+  status: { type: String, enum: ["active", "blocked"], default: "active" },
+  role: { type: String, enum: ["user", "admin"], default: "user" },
+  plan: { type: String, enum: ["free", "starter", "pro"], default: "free" },
+  planStatus: { type: String, enum: ["inactive", "active", "past_due", "canceled"], default: "inactive" },
+  planExpiresAt: { type: Date, default: null }
 }, { timestamps: true });
 
 userSchema.index({ email: 1 }, { unique: true, sparse: true });
