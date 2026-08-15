@@ -3,6 +3,7 @@ import { generateRecipesWithOpenAI } from "../src/integrations/openaiRecipes.js"
 import { recipeRequestSchema } from "../src/validation/recipeSchemas.js";
 
 const env = { OPENAI_API_KEY: "test-key", OPENAI_MODEL: "gpt-5.4-mini" };
+const personalization = { goal: "lose", dailyTargets: { calories: 1800, proteinGrams: 120, fatGrams: 55 } };
 const recipe = {
   title: "Омлет със сирене", description: "Бърз домашен омлет с наличните яйца и сирене.", servings: 2, prepMinutes: 15, rating: 5,
   ingredients: [{ name: "яйца", quantity: "4 броя", available: true }, { name: "сирене", quantity: "100 г", available: true }],
@@ -18,15 +19,19 @@ describe("recipe generation boundaries", () => {
 
   it("accepts three validated recipes and disables provider storage", async () => {
     const fetchImpl = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ output: [{ content: [{ type: "output_text", text: JSON.stringify({ version: "1.0", recipes: [recipe, { ...recipe, title: "Яйца на фурна" }, { ...recipe, title: "Салата със сирене" }] }) }] }] }) });
-    const result = await generateRecipesWithOpenAI({ ingredients: ["яйца", "сирене"], env, fetchImpl });
+    const result = await generateRecipesWithOpenAI({ ingredients: ["яйца", "сирене"], personalization, env, fetchImpl });
     expect(result.recipes).toHaveLength(3);
     expect(result.recipes[0].id).toBe("recipe-1");
     expect(JSON.parse(fetchImpl.mock.calls[0][1].body).store).toBe(false);
+    const body = JSON.parse(fetchImpl.mock.calls[0][1].body);
+    expect(body.input[0].content[0].text).toContain('"goal":"lose"');
+    expect(body.input[0].content[0].text).not.toContain("heightCm");
+    expect(result.personalization).toMatchObject({ goal: "lose", dailyCalories: 1800 });
   });
 
   it("rejects nutrition without explicit estimate provenance", async () => {
     const invalid = { ...recipe, nutrition: { ...recipe.nutrition, source: "verified" } };
     const fetchImpl = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ output: [{ content: [{ type: "output_text", text: JSON.stringify({ version: "1.0", recipes: [invalid, invalid, invalid] }) }] }] }) });
-    await expect(generateRecipesWithOpenAI({ ingredients: ["яйца"], env, fetchImpl })).rejects.toThrow("AI_INVALID_OUTPUT");
+    await expect(generateRecipesWithOpenAI({ ingredients: ["яйца"], personalization, env, fetchImpl })).rejects.toThrow("AI_INVALID_OUTPUT");
   });
 });

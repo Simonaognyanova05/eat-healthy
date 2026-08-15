@@ -49,6 +49,8 @@ export const decidePlanRequest = (id, decision) => request(`/plan-requests/admin
   method: "PATCH",
   body: JSON.stringify({ decision })
 });
+export const getProfile = () => request("/profile");
+export const saveProfile = (values) => request("/profile", { method: "PUT", body: JSON.stringify(values) });
 export const generateRecipes = (ingredients) => request("/recipes/generate", {
   method: "POST",
   body: JSON.stringify({ ingredients: ingredients.map((ingredient) => ingredient.name) })

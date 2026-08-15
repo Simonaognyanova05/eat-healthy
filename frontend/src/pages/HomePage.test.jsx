@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { HomePage } from "./HomePage";
-import { generateRecipes, getMyPlanRequest, getRecognitionUsage, recognizeIngredients } from "../services/authApi";
+import { generateRecipes, getMyPlanRequest, getProfile, getRecognitionUsage, recognizeIngredients } from "../services/authApi";
 
 jest.mock("../services/authApi", () => ({
   logout: jest.fn(),
@@ -12,6 +12,7 @@ jest.mock("../services/authApi", () => ({
   createPlanRequest: jest.fn(),
   getAdminPlanRequests: jest.fn(),
   decidePlanRequest: jest.fn()
+  , getProfile: jest.fn(), saveProfile: jest.fn()
 }));
 
 beforeAll(() => {
@@ -23,12 +24,30 @@ beforeEach(() => {
   jest.clearAllMocks();
   getRecognitionUsage.mockImplementation(() => new Promise(() => {}));
   getMyPlanRequest.mockImplementation(() => new Promise(() => {}));
+  getProfile.mockResolvedValue({ profile: null });
+});
+
+it("opens the private nutrition profile", async () => {
+  render(<HomePage user={{ displayName: "Ива" }} onLoggedOut={jest.fn()} />);
+  fireEvent.click(screen.getByRole("button", { name: "Профил" }));
+  expect(await screen.findByRole("heading", { name: "Профил и цел" })).toBeInTheDocument();
+  expect(screen.getByLabelText("Години")).toBeInTheDocument();
 });
 
 it("shows the server-provided daily recognition allowance", async () => {
   getRecognitionUsage.mockResolvedValue({ plan: "free", used: 0, limit: 50, remaining: 50, resetAt: "2026-08-01T00:00:00.000Z" });
   render(<HomePage user={{ displayName: "Ива" }} onLoggedOut={jest.fn()} />);
   expect(await screen.findByText("50 от 50 снимки остават този месец")).toBeInTheDocument();
+});
+
+it("shows bank transfer instructions for a pending paid plan", async () => {
+  getRecognitionUsage.mockResolvedValue({ plan: "free", used: 0, limit: 50, remaining: 50, resetAt: "2026-09-01T00:00:00.000Z" });
+  getMyPlanRequest.mockResolvedValue({ request: { id: "request-1", plan: "starter", status: "pending", payment: { iban: "BG46STSA93000030986203", reference: "EH-9DE860EA", amountCents: 1500, currency: "eur" } } });
+  render(<HomePage user={{ displayName: "Ива" }} onLoggedOut={jest.fn()} />);
+  fireEvent.click(await screen.findByRole("button", { name: "Виж плановете" }));
+  expect(await screen.findByText("BG46STSA93000030986203")).toBeInTheDocument();
+  expect(screen.getByText("EH-9DE860EA")).toBeInTheDocument();
+  expect(screen.getAllByText("€15").length).toBeGreaterThan(0);
 });
 
 it("opens the camera flow", async () => {
@@ -70,7 +89,7 @@ it("shows a completed state after confirming the corrected ingredients", async (
 it("generates recipe cards and opens a recipe detail", async () => {
   const recipe = { id: "recipe-1", title: "Омлет със сирене", description: "Бърза рецепта с наличните продукти.", servings: 2, prepMinutes: 15, rating: 5, ingredients: [{ name: "яйца", quantity: "4 броя", available: true }], steps: ["Разбий яйцата.", "Изпечи омлета."], nutrition: { calories: 280, proteinGrams: 24, fatGrams: 18, carbsGrams: 3, source: "ai_estimate", confidence: "medium" } };
   recognizeIngredients.mockResolvedValue({ context: "fridge", warnings: [], ingredients: [{ name: "яйца", confidence: 0.95 }] });
-  generateRecipes.mockResolvedValue({ recipes: [recipe, { ...recipe, id: "recipe-2", title: "Яйца на фурна" }, { ...recipe, id: "recipe-3", title: "Салата със сирене" }] });
+  generateRecipes.mockResolvedValue({ personalization: { goal: "lose", dailyCalories: 1800, dailyProteinGrams: 120, dailyFatGrams: 55 }, recipes: [recipe, { ...recipe, id: "recipe-2", title: "Яйца на фурна" }, { ...recipe, id: "recipe-3", title: "Салата със сирене" }] });
   render(<HomePage user={{ displayName: "Ива" }} onLoggedOut={jest.fn()} />);
   fireEvent.change(screen.getByLabelText("Качи снимки от устройството"), { target: { files: [new File(["image"], "fridge.jpg", { type: "image/jpeg" })] } });
   fireEvent.click(screen.getByRole("button", { name: "Разпознай от снимката" }));
@@ -78,6 +97,8 @@ it("generates recipe cards and opens a recipe detail", async () => {
   fireEvent.click(screen.getByRole("button", { name: "Потвърди продуктите" }));
   fireEvent.click(screen.getByRole("button", { name: "Генерирай" }));
   expect(await screen.findByRole("heading", { name: "Три идеи за днес" })).toBeInTheDocument();
+  expect(screen.getByText(/цел: отслабване/i)).toBeInTheDocument();
+  expect(screen.getAllByText(/Ако изядеш една порция/i)).toHaveLength(3);
   expect(generateRecipes).toHaveBeenCalledWith(expect.arrayContaining([expect.objectContaining({ name: "яйца" })]));
   fireEvent.click(screen.getAllByRole("button", { name: "Виж рецептата" })[0]);
   expect(screen.getByRole("heading", { name: "Омлет със сирене" })).toBeInTheDocument();

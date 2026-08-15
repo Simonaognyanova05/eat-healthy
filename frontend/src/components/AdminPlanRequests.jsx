@@ -37,7 +37,7 @@ export function AdminPlanRequests({ open, onClose }) {
       {status === "ready" && !requests.length && <div className="admin-state">Няма чакащи заявки.</div>}
       <div className="admin-request-list">{requests.map((item) => <article key={item.id}>
         <div><strong>{item.owner?.displayName || "Потребител"}</strong><span>{item.owner?.email}</span><small>{new Date(item.createdAt).toLocaleString("bg-BG")}</small></div>
-        <p><b>{item.plan === "starter" ? "Starter" : "Pro"}</b><span>€{(item.priceCents / 100).toFixed(0)} / месец</span></p>
+        <p><b>{item.plan === "starter" ? "Starter" : "Pro"}</b><span>€{(item.priceCents / 100).toFixed(0)} / месец</span><small>Основание: {item.payment?.reference}</small></p>
         <div className="admin-actions"><button className="reject" onClick={() => decide(item.id, "rejected")} disabled={deciding === item.id}><X size={16} /> Откажи</button><button onClick={() => decide(item.id, "approved")} disabled={deciding === item.id}><Check size={16} /> Одобри</button></div>
       </article>)}</div>
     </section>

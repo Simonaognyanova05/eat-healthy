@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { Camera, Crown, ImagePlus, Leaf, LoaderCircle, LogOut, ShieldCheck, Trash2, Upload, X } from "lucide-react";
+import { Camera, Check, Copy, Crown, ImagePlus, Leaf, LoaderCircle, LogOut, ShieldCheck, Trash2, Upload, UserRound, X } from "lucide-react";
 import { BrandMark } from "../components/BrandMark";
 import { CameraDialog } from "../components/CameraDialog";
 import { IngredientReview } from "../components/IngredientReview";
 import { ConfirmedIngredients } from "../components/ConfirmedIngredients";
 import { RecipeResults } from "../components/RecipeResults";
 import { AdminPlanRequests } from "../components/AdminPlanRequests";
+import { ProfileDialog } from "../components/ProfileDialog";
 import { createPlanRequest, generateRecipes, getMyPlanRequest, getRecognitionUsage, logout, recognizeIngredients } from "../services/authApi";
 import "../styles/home.css";
 import "../styles/recognition.css";
@@ -30,11 +31,14 @@ export function HomePage({ user, onLoggedOut }) {
   const [recipes, setRecipes] = useState([]);
   const [recipeStatus, setRecipeStatus] = useState("idle");
   const [recipeError, setRecipeError] = useState("");
+  const [recipePersonalization, setRecipePersonalization] = useState(null);
   const [usage, setUsage] = useState(null);
   const [plansOpen, setPlansOpen] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const [planRequest, setPlanRequest] = useState(null);
   const [requestingPlan, setRequestingPlan] = useState("");
+  const [copiedPayment, setCopiedPayment] = useState("");
 
   useEffect(() => { selectionsRef.current = selections; }, [selections]);
   useEffect(() => () => selectionsRef.current.forEach(({ previewUrl }) => URL.revokeObjectURL(previewUrl)), []);
@@ -79,11 +83,14 @@ export function HomePage({ user, onLoggedOut }) {
       } else { setError(requestError.message); setStatus("error"); }
     }
   }
-  function restart() { selections.forEach(({ previewUrl }) => URL.revokeObjectURL(previewUrl)); setSelections([]); setResult(null); setIngredients([]); setRecipes([]); setRecipeStatus("idle"); setRecipeError(""); setError(""); setStatus("capture"); }
+  function restart() { selections.forEach(({ previewUrl }) => URL.revokeObjectURL(previewUrl)); setSelections([]); setResult(null); setIngredients([]); setRecipes([]); setRecipePersonalization(null); setRecipeStatus("idle"); setRecipeError(""); setError(""); setStatus("capture"); }
   async function createRecipes() {
     setRecipeStatus("loading"); setRecipeError("");
-    try { const data = await generateRecipes(ingredients); setRecipes(data.recipes || []); setRecipeStatus("success"); setStatus("recipes"); }
-    catch (requestError) { setRecipeStatus("error"); setRecipeError(requestError.message); }
+    try { const data = await generateRecipes(ingredients); setRecipes(data.recipes || []); setRecipePersonalization(data.personalization || null); setRecipeStatus("success"); setStatus("recipes"); }
+    catch (requestError) {
+      setRecipeStatus("error"); setRecipeError(requestError.message);
+      if (requestError.code === "PROFILE_REQUIRED") setProfileOpen(true);
+    }
   }
   async function handleLogout() {
     setLoggingOut(true);
@@ -98,10 +105,14 @@ export function HomePage({ user, onLoggedOut }) {
     } catch (requestError) { setError(requestError.message); }
     finally { setRequestingPlan(""); }
   }
+  async function copyPayment(value, field) {
+    try { await navigator.clipboard.writeText(value); setCopiedPayment(field); }
+    catch { setError("Не успяхме да копираме. Задръж върху текста и го копирай ръчно."); }
+  }
 
   return <main className="home-page">
-    <header className="home-header"><BrandMark /><div className="home-account"><span>{user?.displayName || "Твоята кухня"}</span>{user?.role === "admin" && <button className="admin-link" onClick={() => setAdminOpen(true)}><ShieldCheck size={16} /> Заявки</button>}<button className="logout-button" onClick={handleLogout} disabled={loggingOut}><LogOut size={16} /> {loggingOut ? "Излизане…" : "Изход"}</button></div></header>
-    {status === "review" ? <IngredientReview result={result} ingredients={ingredients} onChange={setIngredients} onRestart={restart} onConfirm={() => setStatus("confirmed")} /> : status === "confirmed" ? <ConfirmedIngredients ingredients={ingredients} onEdit={() => setStatus("review")} onGenerate={createRecipes} generating={recipeStatus === "loading"} error={recipeError} /> : status === "recipes" ? <RecipeResults recipes={recipes} onBack={() => setStatus("confirmed")} onRestart={restart} /> : <section className="capture-hero">
+    <header className="home-header"><BrandMark /><div className="home-account"><span>{user?.displayName || "Твоята кухня"}</span><button className="admin-link" onClick={() => setProfileOpen(true)}><UserRound size={16} /> Профил</button>{user?.role === "admin" && <button className="admin-link" onClick={() => setAdminOpen(true)}><ShieldCheck size={16} /> Заявки</button>}<button className="logout-button" onClick={handleLogout} disabled={loggingOut}><LogOut size={16} /> {loggingOut ? "Излизане…" : "Изход"}</button></div></header>
+    {status === "review" ? <IngredientReview result={result} ingredients={ingredients} onChange={setIngredients} onRestart={restart} onConfirm={() => setStatus("confirmed")} /> : status === "confirmed" ? <ConfirmedIngredients ingredients={ingredients} onEdit={() => setStatus("review")} onGenerate={createRecipes} generating={recipeStatus === "loading"} error={recipeError} /> : status === "recipes" ? <RecipeResults recipes={recipes} personalization={recipePersonalization} onBack={() => setStatus("confirmed")} onRestart={restart} /> : <section className="capture-hero">
       <p className="home-eyebrow"><Leaf size={14} /> Започни с това, което имаш</p><h1>Какво има<br />в твоята кухня?</h1>
       <p className="home-intro">Покажи ни хладилника, шкафа или продуктите на масата. Ясната снимка помага да открием повече съставки.</p>
       {usage && <div className={`usage-card ${usage.plan !== "free" ? "is-pro" : ""}`}>
@@ -127,9 +138,14 @@ export function HomePage({ user, onLoggedOut }) {
           <article className="featured"><small>PRO</small><strong>€49 <em>/ месец</em></strong><b>1000 снимки / месец</b><span>За активно ежедневно използване.</span><button onClick={() => requestPlan("pro")} disabled={Boolean(requestingPlan) || planRequest?.status === "pending"}>{requestingPlan === "pro" ? "Изпращане…" : planRequest?.status === "pending" ? "Заявката чака" : "Заяви Pro"}</button></article>
         </div>
         {planRequest?.status === "pending" && <div className="plan-request-status" role="status">Заявката за {PLAN_NAMES[planRequest.plan]} е изпратена до администратора.</div>}
-        <small className="plans-note">Заявката не извършва автоматично плащане. Планът се активира след ръчно одобрение.</small>
+        {planRequest?.status === "pending" && planRequest.payment && <section className="bank-payment" aria-labelledby="bank-payment-title">
+          <header><small>БАНКОВ ПРЕВОД</small><h3 id="bank-payment-title">Завърши заявката с плащане</h3><p>Преведи точната сума и посочи основанието без промени. След потвърждение администраторът ще активира плана.</p></header>
+          <dl><div><dt>Сума</dt><dd>€{(planRequest.payment.amountCents / 100).toFixed(0)}</dd></div><div><dt>IBAN</dt><dd><code>{planRequest.payment.iban}</code><button onClick={() => copyPayment(planRequest.payment.iban, "iban")} aria-label="Копирай IBAN">{copiedPayment === "iban" ? <Check size={16} /> : <Copy size={16} />}</button></dd></div><div><dt>Основание</dt><dd><code>{planRequest.payment.reference}</code><button onClick={() => copyPayment(planRequest.payment.reference, "reference")} aria-label="Копирай основанието">{copiedPayment === "reference" ? <Check size={16} /> : <Copy size={16} />}</button></dd></div></dl>
+        </section>}
+        <small className="plans-note">Планът се активира след получен и ръчно потвърден банков превод.</small>
       </section>
     </div>}
     <AdminPlanRequests open={adminOpen} onClose={() => setAdminOpen(false)} />
+    <ProfileDialog open={profileOpen} onClose={() => setProfileOpen(false)} />
   </main>;
 }

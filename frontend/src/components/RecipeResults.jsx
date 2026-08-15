@@ -5,15 +5,17 @@ function Rating({ value }) {
   return <span className="recipe-rating" aria-label={`${value} от 5 за използване на наличните продукти`}>{[1,2,3,4,5].map((star) => <Star key={star} size={14} fill={star <= value ? "currentColor" : "none"} />)}</span>;
 }
 
-export function RecipeResults({ recipes, onBack, onRestart }) {
+const GOAL_LABELS = { lose: "отслабване", gain: "качване", maintain: "поддържане" };
+
+export function RecipeResults({ recipes, personalization, onBack, onRestart }) {
   const [selected, setSelected] = useState(null);
   if (selected) return <RecipeDetail recipe={selected} onBack={() => setSelected(null)} />;
   return <section className="recipe-results" aria-labelledby="recipes-title">
-    <header><div><p className="home-eyebrow">Създадени за твоята кухня</p><h2 id="recipes-title">Три идеи за днес</h2><p>Избери рецепта, за да видиш продуктите и стъпките.</p></div><button className="secondary-action" onClick={onBack}><ArrowLeft size={17} /> Към продуктите</button></header>
+    <header><div><p className="home-eyebrow">Създадени за твоята кухня{personalization?.goal && ` · цел: ${GOAL_LABELS[personalization.goal]}`}</p><h2 id="recipes-title">Три идеи за днес</h2><p>{personalization ? `Съобразени с дневен ориентир от ${personalization.dailyCalories} kcal и ${personalization.dailyProteinGrams} g протеин.` : "Избери рецепта, за да видиш продуктите и стъпките."}</p></div><button className="secondary-action" onClick={onBack}><ArrowLeft size={17} /> Към продуктите</button></header>
     <div className="recipe-grid">{recipes.map((recipe, index) => <article className="recipe-card" key={recipe.id}>
       <div className="recipe-number">0{index + 1}</div><Rating value={recipe.rating} /><h3>{recipe.title}</h3><p>{recipe.description}</p>
-      <dl><div><dt><Flame size={16} /> kcal</dt><dd>{recipe.nutrition.calories}</dd></div><div><dt>Протеин</dt><dd>{recipe.nutrition.proteinGrams} g</dd></div><div><dt><Clock3 size={16} /> Време</dt><dd>{recipe.prepMinutes} мин</dd></div></dl>
-      <small className="nutrition-note">Ориентировъчна AI оценка за порция</small>
+      <section className="meal-impact"><small>Ако изядеш една порция, ще приемеш приблизително</small><dl><div><dt>Калории</dt><dd>{recipe.nutrition.calories} <em>kcal</em></dd></div><div><dt>Протеин</dt><dd>{recipe.nutrition.proteinGrams} <em>g</em></dd></div><div><dt>Мазнини</dt><dd>{recipe.nutrition.fatGrams} <em>g</em></dd></div><div><dt>Въглехидрати</dt><dd>{recipe.nutrition.carbsGrams} <em>g</em></dd></div></dl></section>
+      <small className="nutrition-note"><Clock3 size={13} /> {recipe.prepMinutes} мин · ориентировъчна AI оценка</small>
       <button className="recipe-open" onClick={() => setSelected(recipe)}>Виж рецептата <ChevronRight size={18} /></button>
     </article>)}</div>
     <button className="recipes-restart" onClick={onRestart}>Започни с нова снимка</button>

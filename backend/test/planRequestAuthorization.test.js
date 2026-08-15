@@ -80,5 +80,10 @@ describe("plan request authorization", () => {
       .send({ plan: "starter" });
     expect(response.status).toBe(201);
     expect(createPlanRequest).toHaveBeenCalledWith(expect.objectContaining({ priceCents: 1500 }));
+    expect(response.body.data.request.payment).toEqual(expect.objectContaining({
+      iban: "BG46STSA93000030986203",
+      reference: "EH-9DE860EA",
+      amountCents: 1500
+    }));
   });
 });
