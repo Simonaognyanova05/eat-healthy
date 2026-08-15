@@ -1,9 +1,18 @@
 import "@testing-library/jest-dom";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { HomePage } from "./HomePage";
-import { generateRecipes, getRecognitionUsage, recognizeIngredients } from "../services/authApi";
+import { generateRecipes, getMyPlanRequest, getRecognitionUsage, recognizeIngredients } from "../services/authApi";
 
-jest.mock("../services/authApi", () => ({ logout: jest.fn(), recognizeIngredients: jest.fn(), generateRecipes: jest.fn(), getRecognitionUsage: jest.fn() }));
+jest.mock("../services/authApi", () => ({
+  logout: jest.fn(),
+  recognizeIngredients: jest.fn(),
+  generateRecipes: jest.fn(),
+  getRecognitionUsage: jest.fn(),
+  getMyPlanRequest: jest.fn(),
+  createPlanRequest: jest.fn(),
+  getAdminPlanRequests: jest.fn(),
+  decidePlanRequest: jest.fn()
+}));
 
 beforeAll(() => {
   URL.createObjectURL = jest.fn(() => "blob:preview"); URL.revokeObjectURL = jest.fn();
@@ -13,6 +22,7 @@ beforeAll(() => {
 beforeEach(() => {
   jest.clearAllMocks();
   getRecognitionUsage.mockImplementation(() => new Promise(() => {}));
+  getMyPlanRequest.mockImplementation(() => new Promise(() => {}));
 });
 
 it("shows the server-provided daily recognition allowance", async () => {

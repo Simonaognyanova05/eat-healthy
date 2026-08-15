@@ -1,5 +1,7 @@
 const API_URL = process.env.REACT_APP_API_URL
-  || (process.env.NODE_ENV === "production" ? "/api/v1" : "http://localhost:4000/api/v1");
+  || (process.env.NODE_ENV === "production"
+    ? "/api/v1"
+    : `${window.location.protocol}//${window.location.hostname}:4000/api/v1`);
 let csrfToken = "";
 
 async function request(path, options = {}) {
@@ -40,6 +42,13 @@ export const recognizeIngredients = (files) => {
   return request("/recognitions", { method: "POST", body: form });
 };
 export const getRecognitionUsage = () => request("/recognitions/usage");
+export const createPlanRequest = (plan) => request("/plan-requests", { method: "POST", body: JSON.stringify({ plan }) });
+export const getMyPlanRequest = () => request("/plan-requests/mine");
+export const getAdminPlanRequests = () => request("/plan-requests/admin");
+export const decidePlanRequest = (id, decision) => request(`/plan-requests/admin/${id}`, {
+  method: "PATCH",
+  body: JSON.stringify({ decision })
+});
 export const generateRecipes = (ingredients) => request("/recipes/generate", {
   method: "POST",
   body: JSON.stringify({ ingredients: ingredients.map((ingredient) => ingredient.name) })

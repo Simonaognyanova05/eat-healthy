@@ -81,6 +81,24 @@ describe("registration boundaries", () => {
     expect(csrfCookie).toContain("SameSite=None");
   });
 
+  it("allows the local React origin from a private network during development", async () => {
+    const developmentEnv = { ...env, NODE_ENV: "development" };
+    const response = await request(createApp(developmentEnv))
+      .get("/")
+      .set("Origin", "http://192.168.1.171:3000");
+    expect(response.status).toBe(200);
+    expect(response.headers["access-control-allow-origin"]).toBe("http://192.168.1.171:3000");
+  });
+
+  it("does not allow a private-network origin override in production", async () => {
+    const productionEnv = { ...env, NODE_ENV: "production" };
+    const response = await request(createApp(productionEnv))
+      .get("/")
+      .set("Origin", "http://192.168.1.171:3000");
+    expect(response.status).toBe(500);
+    expect(response.headers["access-control-allow-origin"]).toBeUndefined();
+  });
+
   it("keeps unknown API routes as JSON in production", async () => {
     const productionEnv = { ...env, NODE_ENV: "production" };
     const response = await request(createApp(productionEnv)).get("/api/v1/missing");

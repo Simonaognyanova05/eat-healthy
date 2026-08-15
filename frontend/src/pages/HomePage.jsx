@@ -5,7 +5,8 @@ import { CameraDialog } from "../components/CameraDialog";
 import { IngredientReview } from "../components/IngredientReview";
 import { ConfirmedIngredients } from "../components/ConfirmedIngredients";
 import { RecipeResults } from "../components/RecipeResults";
-import { generateRecipes, getRecognitionUsage, logout, recognizeIngredients } from "../services/authApi";
+import { AdminPlanRequests } from "../components/AdminPlanRequests";
+import { createPlanRequest, generateRecipes, getMyPlanRequest, getRecognitionUsage, logout, recognizeIngredients } from "../services/authApi";
 import "../styles/home.css";
 import "../styles/recognition.css";
 import "../styles/recipes.css";
@@ -31,12 +32,20 @@ export function HomePage({ user, onLoggedOut }) {
   const [recipeError, setRecipeError] = useState("");
   const [usage, setUsage] = useState(null);
   const [plansOpen, setPlansOpen] = useState(false);
+  const [adminOpen, setAdminOpen] = useState(false);
+  const [planRequest, setPlanRequest] = useState(null);
+  const [requestingPlan, setRequestingPlan] = useState("");
 
   useEffect(() => { selectionsRef.current = selections; }, [selections]);
   useEffect(() => () => selectionsRef.current.forEach(({ previewUrl }) => URL.revokeObjectURL(previewUrl)), []);
   useEffect(() => {
     let active = true;
     getRecognitionUsage().then((data) => { if (active) setUsage(data); }).catch(() => {});
+    return () => { active = false; };
+  }, []);
+  useEffect(() => {
+    let active = true;
+    getMyPlanRequest().then((data) => { if (active) setPlanRequest(data.request); }).catch(() => {});
     return () => { active = false; };
   }, []);
 
@@ -81,9 +90,17 @@ export function HomePage({ user, onLoggedOut }) {
     try { await logout(); onLoggedOut(); }
     catch { setError("Не успяхме да излезем. Опитай отново."); setLoggingOut(false); }
   }
+  async function requestPlan(plan) {
+    setRequestingPlan(plan); setError("");
+    try {
+      const data = await createPlanRequest(plan);
+      setPlanRequest(data.request);
+    } catch (requestError) { setError(requestError.message); }
+    finally { setRequestingPlan(""); }
+  }
 
   return <main className="home-page">
-    <header className="home-header"><BrandMark /><div className="home-account"><span>{user?.displayName || "Твоята кухня"}</span><button className="logout-button" onClick={handleLogout} disabled={loggingOut}><LogOut size={16} /> {loggingOut ? "Излизане…" : "Изход"}</button></div></header>
+    <header className="home-header"><BrandMark /><div className="home-account"><span>{user?.displayName || "Твоята кухня"}</span>{user?.role === "admin" && <button className="admin-link" onClick={() => setAdminOpen(true)}><ShieldCheck size={16} /> Заявки</button>}<button className="logout-button" onClick={handleLogout} disabled={loggingOut}><LogOut size={16} /> {loggingOut ? "Излизане…" : "Изход"}</button></div></header>
     {status === "review" ? <IngredientReview result={result} ingredients={ingredients} onChange={setIngredients} onRestart={restart} onConfirm={() => setStatus("confirmed")} /> : status === "confirmed" ? <ConfirmedIngredients ingredients={ingredients} onEdit={() => setStatus("review")} onGenerate={createRecipes} generating={recipeStatus === "loading"} error={recipeError} /> : status === "recipes" ? <RecipeResults recipes={recipes} onBack={() => setStatus("confirmed")} onRestart={restart} /> : <section className="capture-hero">
       <p className="home-eyebrow"><Leaf size={14} /> Започни с това, което имаш</p><h1>Какво има<br />в твоята кухня?</h1>
       <p className="home-intro">Покажи ни хладилника, шкафа или продуктите на масата. Ясната снимка помага да открием повече съставки.</p>
@@ -106,12 +123,13 @@ export function HomePage({ user, onLoggedOut }) {
         <p>Във всеки план можеш да изпратиш до 5 снимки наведнъж. Квотата се обновява в началото на всеки календарен месец.</p>
         <div className="plan-comparison">
           <article><small>FREE</small><strong>€0 <em>/ месец</em></strong><b>50 снимки / месец</b><span>За да опознаеш Eat Healthy.</span></article>
-          <article><small>STARTER</small><strong>€15 <em>/ месец</em></strong><b>200 снимки / месец</b><span>За редовно планиране у дома.</span></article>
-          <article className="featured"><small>PRO</small><strong>€49 <em>/ месец</em></strong><b>1000 снимки / месец</b><span>За активно ежедневно използване.</span></article>
+          <article><small>STARTER</small><strong>€15 <em>/ месец</em></strong><b>200 снимки / месец</b><span>За редовно планиране у дома.</span><button onClick={() => requestPlan("starter")} disabled={Boolean(requestingPlan) || planRequest?.status === "pending"}>{requestingPlan === "starter" ? "Изпращане…" : planRequest?.status === "pending" ? "Заявката чака" : "Заяви Starter"}</button></article>
+          <article className="featured"><small>PRO</small><strong>€49 <em>/ месец</em></strong><b>1000 снимки / месец</b><span>За активно ежедневно използване.</span><button onClick={() => requestPlan("pro")} disabled={Boolean(requestingPlan) || planRequest?.status === "pending"}>{requestingPlan === "pro" ? "Изпращане…" : planRequest?.status === "pending" ? "Заявката чака" : "Заяви Pro"}</button></article>
         </div>
-        <button className="checkout-pending" disabled>Плащането се конфигурира</button>
-        <small className="plans-note">Няма да бъдеш таксуван. За активиране са нужни избран платежен доставчик и цена.</small>
+        {planRequest?.status === "pending" && <div className="plan-request-status" role="status">Заявката за {PLAN_NAMES[planRequest.plan]} е изпратена до администратора.</div>}
+        <small className="plans-note">Заявката не извършва автоматично плащане. Планът се активира след ръчно одобрение.</small>
       </section>
     </div>}
+    <AdminPlanRequests open={adminOpen} onClose={() => setAdminOpen(false)} />
   </main>;
 }

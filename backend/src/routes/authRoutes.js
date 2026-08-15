@@ -20,7 +20,7 @@ const cookieOptions = (env) => {
     maxAge: 30 * 24 * 60 * 60 * 1000
   };
 };
-const publicUser = (user) => ({ id: user.id, email: user.email, displayName: user.displayName, emailVerified: user.emailVerified });
+const publicUser = (user) => ({ id: user.id, email: user.email, displayName: user.displayName, emailVerified: user.emailVerified, role: user.role });
 
 router.get("/session", async (req, res, next) => {
   try {
