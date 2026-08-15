@@ -41,6 +41,11 @@ export const recognizeIngredients = (files) => {
   files.forEach((file) => form.append("images", file));
   return request("/recognitions", { method: "POST", body: form });
 };
+export const recognizeGuestImage = (file) => {
+  const form = new FormData();
+  form.append("image", file);
+  return request("/recognitions/guest", { method: "POST", body: form });
+};
 export const getRecognitionUsage = () => request("/recognitions/usage");
 export const createPlanRequest = (plan) => request("/plan-requests", { method: "POST", body: JSON.stringify({ plan }) });
 export const getMyPlanRequest = () => request("/plan-requests/mine");
