@@ -14,6 +14,14 @@ const abuseLimit = rateLimit({
   standardHeaders: true,
   legacyHeaders: false
 });
+const guestLimit = rateLimit({
+  windowMs: 24 * 60 * 60 * 1000,
+  limit: 1,
+  skipFailedRequests: true,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: { code: "GUEST_TRIAL_USED", message: "Безплатната гост проба вече е използвана. Създай профил, за да продължиш." } }
+});
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { files: 5, fileSize: MAX_BYTES, fields: 0, parts: 5 },
@@ -37,6 +45,16 @@ async function requireActiveUser(req, res, next) {
 router.get("/usage", requireActiveUser, async (req, res, next) => {
   try {
     return res.json({ data: await getRecognitionUsage(req.authUser) });
+  } catch (error) { return next(error); }
+});
+
+router.post("/guest", upload.single("image"), guestLimit, async (req, res, next) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: { code: "IMAGE_REQUIRED", message: "Добави една снимка." } });
+    const metadata = validateImage(req.file.buffer, req.file.mimetype);
+    if (!metadata) return res.status(415).json({ error: { code: "INVALID_IMAGE", message: "Избери валидна JPG, PNG или WebP снимка до 10 MB." } });
+    const result = await recognizeImages({ images: [{ buffer: req.file.buffer, mime: metadata.mime }], env: req.app.locals.env });
+    return res.json({ data: { ...result, trial: { remaining: 0 } } });
   } catch (error) { return next(error); }
 });
 
